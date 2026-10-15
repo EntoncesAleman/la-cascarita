@@ -4,7 +4,7 @@ const defs={
  sushi:{title:'Con mucho cuidado.',label:'TRES PIEZAS. DOS PALITOS.',instructions:'Sostené una pieza un instante para tomarla con los palitos. Arrastrala despacio hasta el plato de la derecha y soltá. Si la sacudís, la soltás antes de tiempo o apretás demasiado rato, se desarma.',quote:'“Es solo pasarla de un plato a otro.”',meter:'PIEZAS ENTERAS'},
  sweep:{title:'La última barrida.',label:'UNA ESCOBA. UNA PALA.',instructions:'Arrastrá desde cualquier parte para mover la escoba. Juntá la basura y empujala hacia la boca de la pala, a la derecha. Cuando esté todo junto, levantá la pala.',quote:'“Una última pasada y termino.”',meter:'PISO BARRIDO'},
  leaf:{title:'Un poquito de verde.',label:'UN DIENTE. UNA HOJITA.',instructions:'Arrastrá desde cualquier parte para mover la lengua. Apoyala despacio sobre la hojita hasta despegarla y después bajala sin apurarte. Si la empujás de golpe, vuelve a meterse.',quote:'“Debe ser un poquito de perejil.”',meter:'HOJITA DESPEGADA'},
- bomb:{title:'Un ajuste pendiente.',label:'UN PANEL. UN PEQUEÑO AJUSTE.',instructions:'Revisá el panel. Podés tocar sus cables, el botón o el selector, consultar las instrucciones o validar el estado. El reloj está corriendo.',quote:'“Parece bastante claro.”',meter:'VERIFICACIÓN'},
+ bomb:{title:'Un ajuste pendiente.',label:'UN PANEL. UN PEQUEÑO AJUSTE.',instructions:'Probá los botones y el selector del panel. Elegí las pinzas y tocá un cable para cortarlo, o arrastralas desde la derecha hasta el cable. Revisá las señales después de cada ajuste.',quote:'“Parece bastante claro.”',meter:'VERIFICACIÓN'},
  tape:{title:'Encontrá la punta.',label:'UN ROLLO. NADA MÁS.',instructions:'Agarrá la pestaña y hacé tirones cortos hacia la derecha. Podés soltar y volver a agarrar para seguir. Si tirás de golpe o te desviás, se corta.',quote:'“Seguro está por acá.”',meter:'CINTA DESPEGADA'},
  usb:{title:'Del otro lado.',label:'TRES CABLES. TRES PUERTOS.',instructions:'Conectá los tres cables. Elegí uno, giralo si hace falta y probá los puertos. Sus colores no garantizan que sean compatibles. Sostené cada conector alineado para enchufarlo.',quote:'“Probá del otro lado.”',meter:'CABLES CONECTADOS'},
  sheet:{title:'La sábana ajustable.',label:'UNA SÁBANA. CUATRO ESQUINAS.',instructions:'Poné un dedo en cada esquina y mantené los cuatro a la vez durante un momento. Si soltás uno, se escapa esa esquina. En computadora, mantené A, S, K y L simultáneamente.',quote:'“La primera ya estaba puesta.”',meter:'CUATRO ESQUINAS A LA VEZ'},
@@ -22,7 +22,7 @@ function setQuote(x){$('quote').textContent=x}
 function sound(){/* Diseño sin audio obligatorio */ }
 function init(m){
  document.body.classList.add('is-playing');mode=m;sheetPointers.clear();sheetKeys.clear();sneezeBlockedKeys.clear();activePointer=null;pressed=false;origin=null;lastPointer=null;tick=0;mx=190;my=310;
- state={attempts:0,elapsed:0,started:performance.now(),finished:false,progress:0,heat:0,fail:0,grabbing:false,penalty:0,noticeTime:0,tipAngle:rand(-1.8,1.8),peel:0,rotation:0,position:{x:170,y:330},fitted:[false,false,false,false],stripped:0,angle:null,thread:{x:175,y:350},wetUntil:0,threadHold:0,needleWobble:0,motion:0,peelStart:0,peelSpan:200,tapeGrip:0,dockHold:0,socketFace:Math.floor(rand(0,2)),cornerIndex:null,cornerHold:0,lastCorner:null,sheetHold:0,threadStage:'approach',threadInsertion:0,tightness:0,woodDamage:0,woodBroken:false,outcome:null,screwHint:'loose',tongue:{x:450,y:425},leaf:{x:494,y:267},leafLoosen:0,leafAttached:false,bombRemaining:45,bombPending:0,bombChoice:null,bombMessage:'Panel en espera',sneeze:Sneeze.create(),broom:{x:280,y:430},dust:[],dustCollected:0,sweepRounds:0};
+ state={attempts:0,elapsed:0,started:performance.now(),finished:false,progress:0,heat:0,fail:0,grabbing:false,penalty:0,noticeTime:0,tipAngle:rand(-1.8,1.8),peel:0,rotation:0,position:{x:170,y:330},fitted:[false,false,false,false],stripped:0,angle:null,thread:{x:175,y:350},wetUntil:0,threadHold:0,needleWobble:0,motion:0,peelStart:0,peelSpan:200,tapeGrip:0,dockHold:0,socketFace:Math.floor(rand(0,2)),cornerIndex:null,cornerHold:0,lastCorner:null,sheetHold:0,threadStage:'approach',threadInsertion:0,tightness:0,woodDamage:0,woodBroken:false,outcome:null,screwHint:'loose',tongue:{x:450,y:425},leaf:{x:494,y:267},leafLoosen:0,leafAttached:false,bombRemaining:0,bombStarted:false,bombTool:false,bombCuts:[false,false,false,false],bombFeedback:0,bombDial:0,bombButton:false,bombChoice:null,bombMessage:'Panel en espera',sneeze:Sneeze.create(),broom:{x:280,y:430},dust:[],dustCollected:0,sweepRounds:0};
  if(m==='sweep')state.dust=floorDust();
  if(m==='usb')createUSB();if(m==='sushi')createSushi();
  $('hero').style.display='none';$('catalog').style.display='none';$('arcade').classList.add('visible');$('game-title').textContent=defs[m].title.toUpperCase();$('game-subtitle').textContent='Dificultad estimada: baja';$('input-help').textContent={sushi:'Sostené para agarrar, llevá despacio y soltá sobre el plato. No aprietes de más.',sweep:'Barré hacia la pala de la derecha. Después, levantala.',leaf:'Deslizá para mover la lengua. Despegá la hojita y bajala despacio.',bomb:'Revisá el panel y elegí un ajuste. Todavía hay tiempo.',tape:'Sostené la pestaña un instante. Tirones cortos a la derecha; soltá y repetí.',usb:'Conectá los tres cables. Probá puertos: los colores pueden engañar.',sheet:'Un dedo en cada esquina: sostené los cuatro a la vez. En compu: A + S + K + L.',screw:'Girá despacio y soltá en el punto justo. Una vuelta de más puede partir la madera.',needle:'Mové el hilo desde cualquier parte. Atravesá el ojo de izquierda a derecha.'}[m];
@@ -34,7 +34,7 @@ function init(m){
 function actions(){
  let html='';
  if(mode==='sweep')html='<button id="lift-pan">Levantar la pala</button>';
- if(mode==='bomb')html='<button id="manual">Consultar instrucciones</button><button id="verify">Validar panel</button>';
+ if(mode==='bomb')html='<button id="pliers">Usar pinzas</button><button id="manual">Consultar instrucciones</button><button id="verify">Validar panel</button>';
  if(mode==='usb')html='<button id="rotate">↻ Girar conector</button>';
  if(mode==='needle')html='<button id="lick">👅 Chupar el hilo</button>';
  if(mode==='tape')html='<button id="find">🔎 Mirar de cerca</button>';
@@ -43,6 +43,7 @@ function actions(){
  $('actions').innerHTML=html;
  const bind=(id,fn)=>{const n=$(id);if(n)n.onclick=fn};
  bind('lift-pan',liftDustpan);
+ bind('pliers',()=>bombAction('pliers'));
  bind('manual',()=>bombAction('manual'));bind('verify',()=>bombAction('check'));
  bind('rotate',()=>{let c=cable();if(!c||c.connected){const next=state.usbCables.find(v=>!v.connected);if(!next)return;state.activeCable=next.id;c=next;}c.face=(c.face+1)%2;state.dockHold=0;state.attempts++;setQuote('“Cable '+c.label+' girado. Probá ahora.”');});
  bind('lick',()=>{state.wetUntil=performance.now()+6500;state.threadHold=0;setQuote('“Sí. Acabás de chupar el hilo. Está temporalmente rígido.”')});
@@ -60,7 +61,7 @@ function failure(msg){
 }
 function win(){
  if(mode==='sweep')return;
- if(mode==='bomb'){explodeBomb();return}
+ if(mode==='bomb')return;
  if(state.finished)return;if(Sneeze.finish(state.sneeze)){sneezeImpact();return}state.finished=true;state.outcome='won';state.progress=1;
  $('overlay-title').textContent='¿Al fin?';$('overlay-text').textContent='Lo conseguiste en '+fmt(state.elapsed)+' y '+state.attempts+' intentos. La humanidad esperaba menos de vos.';
  $('again').textContent='Sufrir otra vez →';$('overlay').classList.add('on');setQuote('“Una victoria absolutamente innecesaria.”');
@@ -150,17 +151,33 @@ function moveTongue(p,speed){
  else if(distance(state.tongue,state.leaf)<65&&speed>170)slipLeaf();
 }
 const bombWires=[{x:310,color:'#d2746d'},{x:405,color:'#6ca6bd'},{x:500,color:'#dcb14e'},{x:595,color:'#9e94be'}];
-function bombAction(action){
- if(mode!=='bomb'||!state||state.finished||state.bombPending>0)return;
- state.attempts++;state.bombChoice=action;state.bombPending=1.45;state.progress=.82;state.bombMessage={wire:'Circuito aislado. Comprobando estabilidad…',button:'Temporizador en pausa. Confirmando…',dial:'Señal sincronizada. Guardando ajuste…',manual:'Procedimiento encontrado. Aplicando…',check:'Panel correcto. Verificación final…'}[action]||'Verificando…';setQuote('“'+state.bombMessage+'”');
+function bombAction(action,wireIndex=null){
+ if(mode!=='bomb'||!state||state.finished)return;
+ if(!state.bombStarted){state.bombStarted=true;state.bombRemaining=rand(12,39.5);}
+ state.attempts++;state.bombChoice=action;state.bombFeedback=2.5;
+ if(action==='pliers')state.bombTool=true;
+ if(action==='wire'){
+  if(!state.bombTool){state.bombMessage='Elegí las pinzas para cortar un cable.';setQuote('“'+state.bombMessage+'”');return;}
+  if(wireIndex===null||state.bombCuts[wireIndex])return;
+  state.bombCuts[wireIndex]=true;
+ }
+ if(action==='button')state.bombButton=!state.bombButton;
+ if(action==='dial')state.bombDial=(state.bombDial+1)%6;
+ state.progress=Math.min(.97,state.progress+(action==='wire'?.18:.07));
+ state.bombMessage={pliers:'Pinzas listas. Elegí un cable.',wire:'Cable cortado. La señal parece estable.',button:'Ajuste recibido. Indicador actualizado.',dial:'Frecuencia ajustada. Señal alineada.',manual:'Revisá cables, selector e indicadores.',check:'Señal estable. Queda un ajuste pendiente.'}[action]||'Revisando…';setQuote('“'+state.bombMessage+'”');
 }
 function explodeBomb(){
  if(!state||state.finished)return;state.finished=true;state.outcome='exploded';state.grabbing=false;state.progress=.99;state.fail++;
- $('overlay-title').textContent='Estaba casi.';$('overlay-text').textContent={wire:'El circuito estaba estable. La bomba lo tomó mal.',button:'Pausaste el reloj. El resto siguió con sus planes.',dial:'La señal era perfecta. Demasiado perfecta.',manual:'La nota decía «ver edición anterior».',check:'Faltaba una última comprobación. Esta era.'}[state.bombChoice]||'Se terminó el tiempo. Parecía que alcanzaba.';
+ $('overlay-title').textContent='Estaba casi.';$('overlay-text').textContent='Las señales parecían correctas. Algo quedó pendiente.';
  $('again').textContent='Esta vez sí →';$('overlay').classList.add('on');setQuote('“La próxima seguro.”');
 }
+function bombWireAt(p){return p.y>=260&&p.y<=354?bombWires.findIndex(w=>Math.abs(p.x-w.x)<37):-1;}
 function bombTouch(p){
- if(p.y>230&&p.y<365)return'wire';if(distance(p,{x:330,y:455})<80)return'button';if(distance(p,{x:647,y:455})<75)return'dial';return'check';
+ const wire=bombWireAt(p);if(wire>=0){bombAction('wire',wire);return;}
+ if(distance(p,{x:787,y:350})<65){bombAction('pliers');state.grabbing=true;return;}
+ if(distance(p,{x:330,y:455})<48)bombAction('button');
+ else if(distance(p,{x:647,y:455})<44)bombAction('dial');
+ else if(p.x>=414&&p.x<=549&&p.y>=423&&p.y<=474)bombAction('check');
 }
 
 const dustpan={x:610,y:294,w:118,h:106};
@@ -249,7 +266,7 @@ function down(e){
  if(mode==='sushi'){const pieces=state.sushiPieces.filter(c=>!c.delivered&&!c.broken).sort((a,b)=>distance(p,a.position)-distance(p,b.position)),c=pieces[0];if(c&&distance(p,c.position)<touchRadius(23,60)){state.sushiActive=c.id;state.grabbing=true;state.sushiGrip=0;state.sushiPressure=0;grabOffset={x:c.position.x-p.x,y:c.position.y-p.y};setQuote('“Cerrá los palitos despacio…”')}else setQuote('“Elegí una de las piezas de la tabla.”');}
  if(mode==='sweep'){state.grabbing=true;grabOffset={x:state.broom.x-p.x,y:state.broom.y-p.y};state.attempts++;}
  if(mode==='leaf'){state.grabbing=true;grabOffset={x:state.tongue.x-p.x,y:state.tongue.y-p.y};state.attempts++;}
- if(mode==='bomb')bombAction(bombTouch(p));
+ if(mode==='bomb')bombTouch(p);
  if(mode==='tape'){const tip=tapeGeometry().tip;if(distance(p,tip)<touchRadius(22,37)){state.grabbing=true;state.tapeGrip=0;state.peelStart=state.peel;state.peelSpan=Math.max(80,Math.min(200,W-p.x-28));mx=tip.x;my=tip.y;grabOffset={x:tip.x-p.x,y:tip.y-p.y};setQuote('“La agarraste. Tirones cortos, sin apurarte.”')}else failure('“Eso no era la punta.”')}
  if(mode==='usb'){const options=state.usbCables.filter(c=>!c.connected).sort((a,b)=>distance(p,a.position)-distance(p,b.position)),c=options[0];if(c&&distance(p,c.position)<touchRadius(25,82)){state.activeCable=c.id;state.grabbing=true;state.dockHold=0;grabOffset={x:c.position.x-p.x,y:c.position.y-p.y};setQuote('“Cable '+c.label+'. A ver dónde entra.”')}else setQuote('“Elegí uno de los cables que todavía están sueltos.”')}
  if(mode==='screw'){const r=distance(p,{x:450,y:330});if(r<touchRadius(38,115)){state.grabbing=true;state.angle=r>=26?Math.atan2(p.y-330,p.x-450):null}else failure('“El destornillador patinó en la mesa.”')}
@@ -310,6 +327,7 @@ function breakWood(){
 function up(e){
  if(mode==='sheet'){sheetUp(e);return}
  if(e&&e.pointerId!==undefined&&e.pointerId!==activePointer)return;
+ if(mode==='bomb'&&state.grabbing&&e?.type==='pointerup'){const wire=bombWireAt(point(e));if(wire>=0)bombAction('wire',wire);}
  const finish=mode==='screw'&&state&&!state.finished&&pressed&&state.grabbing&&e&&e.type==='pointerup'&&state.tightness>=screwLimits.ready&&state.tightness<=screwLimits.over;
  pressed=false;activePointer=null;
  if(state){state.grabbing=false;state.cornerHold=0;state.cornerIndex=null;state.threadHold=0;state.dockHold=0;state.tapeGrip=0}
@@ -318,7 +336,7 @@ function up(e){
 }
 function almostThere(){
  if(!state||state.finished||state.penalty>0)return false;
- if(mode==='bomb')return state.bombPending>0;
+ if(mode==='bomb')return false;
  if(mode==='sheet')return state.fitted.every(Boolean)&&state.sheetHold>.65;
  if(!pressed||!state.grabbing)return false;
  if(mode==='sushi')return state.sushiHeld&&sushiPiece().position.x>490;
@@ -331,7 +349,7 @@ function almostThere(){
  return false;
 }
 function sneezeImpact(){
- if(!state||state.finished)return;
+ if(!state||state.finished||mode==='bomb')return;
  const ids=mode==='sheet'?Array.from(sheetPointers.keys()):activePointer===null?[]:[activePointer];
  if(mode==='sheet'){for(const key of sheetKeys)sneezeBlockedKeys.add(key);sheetPointers.clear();sheetKeys.clear();state.fitted=[false,false,false,false];state.sheetHold=0;}
  pressed=false;activePointer=null;state.grabbing=false;state.dockHold=0;state.tapeGrip=0;state.motion=0;state.fail++;state.attempts++;state.penalty=.65;state.noticeTime=4;
@@ -344,21 +362,20 @@ function sneezeImpact(){
  if(mode==='leaf'){state.leaf={x:494,y:267};state.tongue={x:450,y:425};state.leafAttached=false;state.leafLoosen=0;state.progress=0;}
  if(mode==='sheet')state.progress=0;
  if(mode==='screw'){state.tightness+=.34;updateWood();}
- if(mode==='bomb'){explodeBomb();$('overlay-title').textContent='¡Achís!';$('overlay-text').textContent='La verificación iba perfecta. Hasta que estornudaste.';return}
  setQuote(mode==='screw'&&state.woodBroken?'“¡Achís! Una vuelta de más y se partió.”':'“¡Achís! Justo ahora. Volvé a agarrar.”');
 }
 
 function advance(dt,now){
  if(!state)return;
  state.noticeTime=Math.max(0,state.noticeTime-dt);
- if(Sneeze.tick(state.sneeze,dt,almostThere())){sneezeImpact();return}
+ if(mode!=='bomb'&&Sneeze.tick(state.sneeze,dt,almostThere())){sneezeImpact();return}
  if(state.finished)return;
- state.elapsed=(now-state.started)/1000;state.penalty=Math.max(0,state.penalty-dt);state.heat=Math.max(0,state.heat-dt*.045);
+ state.elapsed=mode==='bomb'?(state.bombStarted?state.elapsed+dt:0):(now-state.started)/1000;state.penalty=Math.max(0,state.penalty-dt);state.heat=Math.max(0,state.heat-dt*.045);
  if(now-tick>100)state.motion=0;
  if(mode==='sushi'){advanceSushi(dt);return}
  if(mode==='bomb'){
- if(state.bombPending>0){state.bombPending=Math.max(0,state.bombPending-dt);state.progress=.82+(1-state.bombPending/1.45)*.16;if(state.bombPending===0)explodeBomb();}
- else{state.bombRemaining=Math.max(0,state.bombRemaining-dt);if(state.bombRemaining===0)explodeBomb();}return;
+ state.bombFeedback=Math.max(0,state.bombFeedback-dt);
+ if(state.bombStarted){state.bombRemaining=Math.max(0,state.bombRemaining-dt);if(state.bombRemaining===0)explodeBomb();}return;
  }
  if(mode==='sheet'){
  syncSheet();const n=state.fitted.filter(Boolean).length;
@@ -589,17 +606,28 @@ function drawBomb(){
  oval(450,526,294,27,'#b19b7850');rect(168,137,564,384,24,'#8a8071','#6a6b59');rect(160,125,564,384,24,shade(125,384,'#c5c1a6','#9caa91'),'#6c8069');line(188,132,694,132,'#e5dfc3',4);
  for(const [x,y]of [[185,150],[699,150],[185,485],[699,485]]){circle(x,y,7,'#758a75','#e9e4c6');line(x-3,y,x+3,y,'#e9e4c6',2);}
  rect(285,154,315,84,12,'#42594a','#d6d5b4');
- const seconds=Math.max(0,Math.ceil(state.bombRemaining)),clock='00:'+String(seconds).padStart(2,'0');text(442,211,clock,46,state.bombPending>0?'#b6da97':'#f2d897');
+ text(442,207,state.bombFeedback>0?'SEÑAL OK':'EN LÍNEA',27,'#b6da97');
  bombWires.forEach((wire,i)=>{
   circle(wire.x-24,260,11,'#6b7962','#dae2c0');circle(wire.x+24,354,11,'#6b7962','#dae2c0');
-  path(c=>{c.moveTo(wire.x-24,260);c.bezierCurveTo(wire.x+38,280,wire.x-40,327,wire.x+24,354)},null,'#52634e',13);
-  path(c=>{c.moveTo(wire.x-24,259);c.bezierCurveTo(wire.x+38,279,wire.x-40,326,wire.x+24,353)},null,wire.color,9);
+  if(state.bombCuts[i]){
+   path(c=>{c.moveTo(wire.x-24,260);c.quadraticCurveTo(wire.x+10,273,wire.x-9,299)},null,wire.color,9);
+   path(c=>{c.moveTo(wire.x+12,318);c.quadraticCurveTo(wire.x-12,338,wire.x+24,354)},null,wire.color,9);
+   circle(wire.x-9,299,4,'#e8c581');circle(wire.x+12,318,4,'#e8c581');
+  }else{
+   path(c=>{c.moveTo(wire.x-24,260);c.bezierCurveTo(wire.x+38,280,wire.x-40,327,wire.x+24,354)},null,'#52634e',13);
+   path(c=>{c.moveTo(wire.x-24,259);c.bezierCurveTo(wire.x+38,279,wire.x-40,326,wire.x+24,353)},null,wire.color,9);
+  }
   text(wire.x,388,['◆','●','▲','■'][i],16,'#667c61');
  });
- circle(330,455,40,'#914c48','#d2c9ac',4);circle(330,449,34,shade(415,68,'#edb19a','#c46d63'),'#a15c51');text(330,457,'↻',27,'#fff3d4');
- circle(647,455,35,'#627b68','#d9dcc1',4);circle(647,455,24,'#9eb38e');line(647,455,657,436,'#f5efce',5);
- rect(414,423,135,51,9,'#d8dab9','#82977b');text(481,455,state.bombPending>0?'✓ OK':'REVISAR',16,'#536c50');
- pill(450,557,state.bombPending>0?'SEÑAL ESTABLE · VERIFICANDO':'PANEL EN ESPERA');text(450,590,state.bombPending>0?'Parece que funcionó. Un instante…':'Tocá un elemento o consultá las instrucciones.',16);
+ circle(330,455,40,'#914c48','#d2c9ac',4);circle(330,449,34,shade(415,68,'#edb19a','#c46d63'),'#a15c51');text(330,457,state.bombButton?'✓':'↻',27,'#fff3d4');
+ circle(647,455,35,'#627b68','#d9dcc1',4);circle(647,455,24,'#9eb38e');line(647,455,647+Math.sin(state.bombDial*Math.PI/3)*21,455-Math.cos(state.bombDial*Math.PI/3)*21,'#f5efce',5);
+ rect(414,423,135,51,9,'#d8dab9','#82977b');text(481,455,state.bombFeedback>0?'✓ OK':'REVISAR',16,'#536c50');
+ const tool=state.grabbing?{x:mx,y:my}:{x:787,y:350};
+ ctx.save();ctx.translate(tool.x,tool.y);ctx.rotate(-.35);
+ line(-5,5,-24,58,'#608779',13);line(5,5,24,58,'#608779',13);
+ path(c=>{c.moveTo(-7,6);c.lineTo(-23,-30);c.lineTo(-7,-18);c.lineTo(0,-4);c.lineTo(7,-18);c.lineTo(23,-30);c.lineTo(7,6);c.closePath()},'#b8c1b2','#657c71',2);circle(0,7,7,'#d1b77e','#687a6b');ctx.restore();
+ if(!state.grabbing)text(787,435,state.bombTool?'PINZAS LISTAS':'PINZAS',13,'#607a65');
+ pill(450,557,state.bombFeedback>0?'SEÑAL ESTABLE · REVISANDO':'PANEL EN ESPERA');text(450,590,'Probá los botones. Usá las pinzas para cortar cables.',16);
 }
 
 function sushiShape(c){

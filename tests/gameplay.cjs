@@ -149,20 +149,29 @@ test('leaf can be loosened slowly and carried down by the tongue',()=>{
 test('rushing the tongue makes the leaf slip back between the teeth',()=>{
  const h=setup();h.run("init('leaf');state.tongue={x:494,y:267};state.leafLoosen=.7");h.fire('pointerdown',100,100);h.setTime(h.time+20);h.fire('pointermove',140,100);assert(h.run('state.fail')>0);assert(!h.run('state.leafAttached'));assert(h.run('state.leafLoosen<.7'));assert.equal(h.run('state.leaf.y'),267);
 });
-test('every bomb action offers false progress and then explodes without a winning path',()=>{
- for(const action of ['wire','button','dial','manual','check']){const h=setup();h.run("init('bomb')");h.run(`bombAction('${action}')`);assert(!h.run('state.finished'));assert(h.run('state.progress')>.8);h.step(1.5);assert.equal(h.run('state.outcome'),'exploded');assert(h.run('state.progress')<1);}
+test('bomb waits for first interaction, then explodes only at its hidden random deadline',()=>{
+ const h=setup();h.run("init('bomb');Sneeze.random=()=>0;state.sneeze.cooldown=0");h.step(450);assert(!h.run('state.finished'));assert.equal(h.run('state.bombRemaining'),0);assert.equal(h.run('state.elapsed'),0);assert.equal(h.run('state.sneeze.count'),0);
+ h.run("bombAction('button')");const deadline=h.run('state.bombRemaining');assert(deadline>=12&&deadline<40);
+ h.step(2);assert(!h.run('state.finished'));const remaining=h.run('state.bombRemaining');h.run("bombAction('dial');bombAction('manual');bombAction('check');win();sneezeImpact()");assert.equal(h.run('state.bombRemaining'),remaining);assert(!h.run('state.finished'));assert.equal(h.run('state.sneeze.count'),0);
+ h.step(remaining-.1);assert(!h.run('state.finished'));h.step(.2);assert.equal(h.run('state.outcome'),'exploded');assert(!/achís/i.test(h.els['overlay-title'].textContent));
+ h.run("init('bomb')");assert(!h.run('state.bombStarted'));assert(h.run('state.bombCuts.every(c=>!c)'));
 });
-test('bomb touch release cannot cancel the explosion and doing nothing also loses',()=>{
- const h=setup();h.run("init('bomb')");h.fire('pointerdown',310,300);h.fire('pointerup',310,300);h.step(1.5);assert.equal(h.run('state.outcome'),'exploded');
- h.run("init('bomb')");h.step(45.1);assert.equal(h.run('state.outcome'),'exploded');h.run("init('bomb')");assert.equal(h.run('state.bombPending'),0);assert.equal(h.run('state.bombRemaining'),45);assert.equal(h.run('state.outcome'),null);
+test('bomb buttons respond and pliers cut individual wires through tap or drag',()=>{
+ const h=setup();h.run("init('bomb')");h.fire('pointerdown',330,455);h.fire('pointerup',330,455);assert(h.run('state.bombButton'));
+ h.fire('pointerdown',647,455);h.fire('pointerup',647,455);assert.equal(h.run('state.bombDial'),1);
+ h.fire('pointerdown',310,300);h.fire('pointerup',310,300);assert(!h.run('state.bombCuts[0]'));
+ h.fire('pointerdown',787,350);h.fire('pointermove',310,300);h.fire('pointerup',310,300);assert(h.run('state.bombCuts[0]'));
+ h.fire('pointerdown',405,300);h.fire('pointerup',405,300);assert(h.run('state.bombCuts[1]'));assert(!h.run('state.bombCuts[2]'));
+ h.fire('pointerdown',787,350);h.fire('pointercancel',500,300);assert(!h.run('state.bombCuts[2]'));
+ assert(!h.run('state.finished'));assert(h.run('state.progress')<1);
 });
 test('ten catalog entries link to existing game artwork without revealing the bomb trick',()=>{
  const html=fs.readFileSync(path.join(root,'index.html'),'utf8');assert.equal((html.match(/class="game-card"/g)||[]).length,10);
  for(const mode of ['leaf','bomb','sweep','sushi']){assert(html.includes('data-open="'+mode+'"'));for(const width of [480,960]){assert(html.includes('assets/'+mode+'-'+width+'.webp'));assert(fs.existsSync(path.join(root,'assets',mode+'-'+width+'.webp')));}}
  const card=html.split('data-open="bomb"')[0].split('<article').pop();assert(!/imposible|sin solución|siempre explota/i.test(card));
 });
-test('random sneeze affects all nine arcade games only near completion',()=>{
- const situations={sushi:'state.sushiHeld=true;sushiPiece().position={x:600,y:350}',sweep:'state.progress=.9',tape:'state.peel=.9',usb:'state.usbCables[0].connected=true;state.usbCables[1].connected=true;state.activeCable=2;state.dockHold=.6',sheet:'sheetKeys=new Set([0,1,2,3]);syncSheet();state.sheetHold=1',screw:'state.tightness=.99',needle:"state.threadStage='through'",leaf:'state.leafAttached=true',bomb:"bombAction('check')"};
+test('random sneeze affects the other eight arcade games only near completion',()=>{
+ const situations={sushi:'state.sushiHeld=true;sushiPiece().position={x:600,y:350}',sweep:'state.progress=.9',tape:'state.peel=.9',usb:'state.usbCables[0].connected=true;state.usbCables[1].connected=true;state.activeCable=2;state.dockHold=.6',sheet:'sheetKeys=new Set([0,1,2,3]);syncSheet();state.sheetHold=1',screw:'state.tightness=.99',needle:"state.threadStage='through'",leaf:'state.leafAttached=true'};
  for(const [mode,prepare]of Object.entries(situations)){
   const h=setup();h.run(`init('${mode}');state.sneeze.cooldown=0;state.sneeze.random=()=>0;pressed=true;state.grabbing=true;${prepare}`);h.run(`advance(.016,${h.time})`);assert.equal(h.run('state.sneeze.count'),1,mode);assert(h.run('state.sneeze.cooldown>=300&&state.sneeze.cooldown<=420'));assert(!h.run('state.grabbing'));
   if(mode==='tape')assert(h.run('state.peel<.5'));
