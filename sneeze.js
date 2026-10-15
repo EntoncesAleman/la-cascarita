@@ -2,8 +2,9 @@
 // Shared, frame-rate-independent surprise used by both game pages.
 const Sneeze={
  random:()=>Math.random(),
- create(){return{cooldown:.8,flash:0,count:0,random:this.random}},
- fire(s){s.count++;s.flash=1.15;s.cooldown=9+s.random()*5;return true},
+ delay(random){return 300+random()*120},
+ create(){return{cooldown:this.delay(this.random),flash:0,count:0,random:this.random}},
+ fire(s){s.count++;s.flash=1.15;s.cooldown=this.delay(s.random);return true},
  tick(s,dt,near){dt=Math.max(0,Math.min(dt,.1));s.flash=Math.max(0,s.flash-dt);s.cooldown=Math.max(0,s.cooldown-dt);return near&&s.cooldown===0&&s.random()<1-Math.exp(-.65*dt)?this.fire(s):false},
  finish(s){return s.cooldown===0&&s.random()<.22?this.fire(s):false},
  draw(ctx,s,w,h){
