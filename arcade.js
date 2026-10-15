@@ -746,41 +746,80 @@ function drawBomb(){
  pill(450,557,state.bombFeedback>0?'SEÑAL ESTABLE · REVISANDO':'PANEL EN ESPERA');text(450,590,'Botones, teclas, perillas… Alguna combinación debe servir.',16);
 }
 
+function dogGlow(x,y,r,light,dark){const g=ctx.createRadialGradient(x-r*.3,y-r*.4,r*.08,x,y,r);g.addColorStop(0,light);g.addColorStop(1,dark);return g;}
 function drawDog(){
- // Soft vector living room, dog silhouette and a hand holding a tiny cheese parcel.
- rect(100,147,685,325,28,shade(147,325,'#c5d0a8','#8fa582'),'#8c9e7a');
- rect(105,335,675,155,25,shade(335,155,'#b0bf96','#839b79'),'#82966f');
- rect(115,155,172,171,26,'#ded9b9','#afb18f');line(139,176,260,304,'#c4c5a0',3);line(260,176,139,304,'#c4c5a0',3);
- oval(623,508,155,20,'#aa98784a');oval(672,437,99,77,shade(360,150,'#cb9b63','#a8784b'),'#a47d51');
- path(c=>{c.moveTo(735,460);c.quadraticCurveTo(809,405,782,376)},null,'#b88855',24);
- oval(620,493,41,20,'#e2bd83','#b68a5a');oval(708,493,41,20,'#e2bd83','#b68a5a');
- rect(595,380,126,22,10,'#658e78','#53775e');circle(655,408,11,'#e7c66f','#b49450');
- const mouth=dogMouth(),dx=mouth.x-564,dy=mouth.y-341;ctx.save();ctx.translate(dx,dy);
- oval(649,296,122,127,shade(170,245,'#e1b176','#bb874f'),'#aa7c4e');
- path(c=>{c.moveTo(560,211);c.bezierCurveTo(509,176,504,326,537,342);c.quadraticCurveTo(576,337,586,234);c.closePath()},shade(197,150,'#a97547','#805a3f'),'#89603f');
- path(c=>{c.moveTo(725,205);c.bezierCurveTo(793,184,801,334,766,346);c.quadraticCurveTo(723,337,713,230);c.closePath()},shade(197,150,'#a97547','#805a3f'),'#89603f');
- oval(598,274,14,18,'#fff3d5');oval(685,268,14,18,'#fff3d5');
- const glance=state.dogTurn>0?8:-3;oval(594+glance,275,8,11,'#45392f');oval(681+glance,269,8,11,'#45392f');circle(592+glance,272,3,'#fff9e6');circle(679+glance,266,3,'#fff9e6');
- path(c=>{c.moveTo(578,247);c.quadraticCurveTo(596,234,612,245);c.moveTo(668,239);c.quadraticCurveTo(685,230,700,240)},null,'#926742',4);
- oval(578,334,70,52,'#f3d7a4','#c89e6d');oval(583,308,26,17,'#4a4035','#6f5640');oval(575,302,10,4,'#7d6a52');
- const open=dogOpen()||state.dogStage==='spit',chew=state.dogStage==='chew';
- oval(564,341,37,open?22:chew?7+Math.sin(state.dogClock*17)*3:4,'#5b3a37');
- if(open){oval(565,353,20,9,'#dc9995');line(563,351,564,357,'#b9777b',1.5);}
+ const clock=state.dogClock,mouth=dogMouth(),dx=mouth.x-564,dy=mouth.y-341;
+ const open=dogOpen()||state.dogStage==='spit',chew=state.dogStage==='chew',chewY=chew?Math.sin(clock*17)*3:0;
+ // A sunlit room and upholstered sofa, drawn with the same shapes at every scale.
+ rect(78,127,744,402,25,shade(127,402,'#c5c8a0','#a5ae87'),'#bcc09a');
+ rect(95,143,142,186,6,'#e9d9ac','#c1b78d');rect(104,151,124,170,3,shade(151,170,'#fff3c6','#dcd8ac'));
+ line(165,151,165,322,'#c9c99f',5);line(104,231,228,231,'#d2cba3',5);
+ path(c=>{c.moveTo(109,148);c.lineTo(215,148);c.lineTo(492,514);c.lineTo(246,514);c.closePath()},'#fff0b72b',null);
+ rect(102,242,678,249,36,shade(242,249,'#a7b48b','#7f9471'),'#839574');
+ rect(111,257,202,176,28,shade(257,176,'#b7c49a','#94a67f'),'#91a37d');rect(320,257,203,176,28,shade(257,176,'#b5c198','#91a47e'),'#91a37d');
+ line(319,279,319,413,'#d1d6af',2);rect(106,415,676,99,25,shade(415,99,'#bac7a1','#92a87f'),'#829a74');
+ path(c=>{c.moveTo(114,451);c.quadraticCurveTo(428,469,772,446)},null,'#d0d9b6',3);
+ ctx.save();ctx.translate(233,326);ctx.rotate(-.15);rect(-80,-70,157,142,22,shade(-70,142,'#e9dfbb','#c8c7a2'),'#aeb58d');
+ for(let i=-56;i<70;i+=24){line(i,-64,i,64,'#b1b996',7);line(-73,i,70,i,'#c0c5a0',7);line(i+4,-64,i+4,64,'#f6ecd1',1);}ctx.restore();
+ // Soft shadows, wagging tail, fluffy chest and separate toes.
+ oval(649,512,151,15,'#6f795334');
+ const wag=Math.sin(clock*5)*9;
+ path(c=>{c.moveTo(736,467);c.bezierCurveTo(797,451,797+wag,406,778+wag,397)},null,'#987048',27);
+ path(c=>{c.moveTo(738,461);c.bezierCurveTo(792,445,792+wag,410,778+wag,397)},null,'#d5ab71',20);
+ oval(676,436,99,75,dogGlow(665,422,111,'#eac48a','#ae7e4a'),'#af8653');
+ path(c=>{c.moveTo(610,377);c.bezierCurveTo(578,414,583,466,613,487);c.quadraticCurveTo(646,506,675,477);c.bezierCurveTo(682,448,664,399,651,382);c.closePath()},shade(381,112,'#fff0c7','#dbc08f'),'#c7a675');
+ path(c=>{c.moveTo(613,405);c.lineTo(607,430);c.lineTo(617,425);c.lineTo(613,449);c.moveTo(650,406);c.lineTo(660,430);c.lineTo(651,426)},null,'#e5c994',2);
+ oval(609,487,38,24,dogGlow(605,479,46,'#f0d3a0','#c19762'),'#b08a59');oval(707,487,41,24,dogGlow(697,479,49,'#ebca91','#ba8e57'),'#ad8150');
+ for(const x of [594,610,691,707])path(c=>{c.moveTo(x,489);c.quadraticCurveTo(x-3,496,x,504)},null,'#a9875c',1.7);
+ rect(588,375,125,22,10,shade(375,22,'#91aa7f','#56775e'),'#4f7358');line(597,379,703,379,'#bdd0a0',2);circle(647,401,13,dogGlow(645,398,16,'#f6de99','#c5a254'),'#af8e45');circle(647,401,5,'#e8c77c');
+ // Ears sit behind the head; a cream blaze and overlapping cheeks give the muzzle depth.
+ ctx.save();ctx.translate(dx,dy);
+ path(c=>{c.moveTo(562,214);c.bezierCurveTo(539,184,504,212,503,274);c.bezierCurveTo(499,319,511,365,537,363);c.bezierCurveTo(562,362,575,299,579,251);c.closePath()},shade(204,164,'#b78852','#805938'),'#997044',2);
+ path(c=>{c.moveTo(547,226);c.bezierCurveTo(524,243,515,315,531,345)},null,'#cf9f66',6);
+ path(c=>{c.moveTo(570,213);c.bezierCurveTo(581,178,620,164,660,172);c.bezierCurveTo(700,169,745,202,753,244);c.bezierCurveTo(773,293,751,363,710,389);c.bezierCurveTo(664,421,601,396,570,363);c.bezierCurveTo(548,337,543,268,557,237);c.closePath()},dogGlow(625,258,173,'#f3d298','#bc8a50'),'#b48956',2);
+ path(c=>{c.moveTo(597,203);c.quadraticCurveTo(625,181,649,185);c.moveTo(615,191);c.quadraticCurveTo(625,171,638,177);c.moveTo(641,185);c.quadraticCurveTo(655,177,666,184)},null,'#f8dda8',4);
+ path(c=>{c.moveTo(627,184);c.bezierCurveTo(611,219,614,258,599,283);c.quadraticCurveTo(578,299,572,324);c.lineTo(636,328);c.bezierCurveTo(644,289,620,256,634,221);c.quadraticCurveTo(643,192,627,184);c.closePath()},shade(184,150,'#fff1cd','#e9d2a4'),null);
+ // Glossy almond eyes track the cheese instead of staring straight ahead.
+ const focus=state.dogStage==='offer'?state.dogHand:mouth,lookX=state.dogTurn>0?6:clamp((focus.x-625)/55,-6,4),lookY=clamp((focus.y-280)/80,-3,4);
+ for(const eye of [{x:591,y:268,rx:23,ry:27},{x:683,y:264,rx:24,ry:28}]){
+  oval(eye.x,eye.y+3,eye.rx+4,eye.ry+4,'#b18757');oval(eye.x,eye.y,eye.rx,eye.ry,'#fff4d8','#946b45');
+  oval(eye.x+lookX,eye.y+lookY,16,21,dogGlow(eye.x+lookX-3,eye.y+lookY-6,25,'#b9874e','#513a2a'),'#4c3929');
+  oval(eye.x+lookX-1,eye.y+lookY+1,9,15,'#302e28');oval(eye.x+lookX-6,eye.y+lookY-8,6,8,'#fff9e6');circle(eye.x+lookX+6,eye.y+lookY+9,2.5,'#e6d0a0');
+  path(c=>{c.moveTo(eye.x-eye.rx,eye.y-4);c.quadraticCurveTo(eye.x-3,eye.y-eye.ry-13,eye.x+eye.rx,eye.y-7)},null,'#8b633d',3);
+ }
+ const brow=state.dogTurn>0?5:0;
+ path(c=>{c.moveTo(566,236);c.quadraticCurveTo(583,222-brow,605,233);c.moveTo(664,228);c.quadraticCurveTo(684,217+brow,704,234)},null,'#b0804e',6);
+ path(c=>{c.moveTo(716,217);c.bezierCurveTo(735,192,768,204,778,249);c.bezierCurveTo(796,301,790,375,763,389);c.bezierCurveTo(735,404,711,362,708,312);c.bezierCurveTo(701,270,702,236,716,217);c.closePath()},dogGlow(738,261,145,'#c79a60','#87603c'),'#9d7547',2.5);
+ for(let i=0;i<5;i++)path(c=>{const x=720+i*10;c.moveTo(x,237+i*2);c.bezierCurveTo(x-10,279,x+29,328,x+6,367-i*3)},null,i%2?'#a57a49':'#d1a56b',2);
+ // The visible mouth center is also the unchanged gameplay target (564,341).
+ oval(606,343,48,47,dogGlow(595,325,73,'#fff0c9','#d7b47f'));
+ path(c=>{c.moveTo(525,316);c.bezierCurveTo(537,293,566,288,588,303);c.bezierCurveTo(622,301,635,325,628,350+chewY);c.bezierCurveTo(622,377+chewY,574,385,539,369);c.bezierCurveTo(516,360,511,337,525,316);c.closePath()},dogGlow(563,322,92,'#fff0c7','#e0c18e'),'#c4a16e',2);
+ if(open){
+  path(c=>{c.moveTo(526,334);c.quadraticCurveTo(564,320,602,334);c.bezierCurveTo(601,365,579,378,555,369);c.quadraticCurveTo(534,366,526,334);c.closePath()},shade(324,51,'#553933','#392a2b'),'#8e6450',2);
+  oval(564,357,22,11,shade(346,23,'#efb6aa','#cb8b87'));line(564,350,565,362,'#bd7e7c',1.5);
+  path(c=>{c.moveTo(536,335);c.lineTo(542,345);c.lineTo(548,334);c.moveTo(585,333);c.lineTo(591,344);c.lineTo(596,335)},'#fff5d9',null);
+ }else path(c=>{c.moveTo(530,340+chewY);c.quadraticCurveTo(563,356+chewY,600,338-chewY)},null,'#86604b',3.5);
+ path(c=>{c.moveTo(553,301);c.bezierCurveTo(563,293,589,294,599,302);c.quadraticCurveTo(605,313,582,325);c.quadraticCurveTo(557,322,553,301);c.closePath()},dogGlow(576,303,32,'#6e6453','#3c3830'),'#554838',2);
+ oval(570,301,12,4,'#a3967c');oval(562,308,5,3,'#342e28');oval(590,309,5,3,'#342e28');line(579,324,578,333,'#987758',2);
+ for(const [x,y]of [[535,323],[546,326],[534,335],[608,321],[615,333]])circle(x,y,1.7,'#b69a71');
+ path(c=>{c.moveTo(622,355);c.quadraticCurveTo(649,348,658,331)},null,'#e8c795',3);
  ctx.restore();
- // A comfortable-sized hand makes the cheese position readable on mobile.
  if(state.dogStage==='offer'){
   const p=state.dogHand;
-  path(c=>{c.moveTo(77,485);c.bezierCurveTo(116,449,p.x-95,p.y+37,p.x-37,p.y+19)},null,'#b57d5d',52);
-  path(c=>{c.moveTo(77,480);c.bezierCurveTo(116,444,p.x-95,p.y+32,p.x-37,p.y+14)},null,'#edba8b',45);
-  oval(p.x-36,p.y+13,34,21,'#efbd91','#c78e69');
-  rect(p.x-31,p.y-7,48,17,8,'#f2c49b','#c78e69');rect(p.x-25,p.y+11,40,17,8,'#edba8a','#c78e69');
-  rect(p.x-13,p.y-22,33,28,5,shade(p.y-22,28,'#ffe4a0','#dfb562'),'#bc974f');circle(p.x-3,p.y-12,3,'#d2a85c');
-  if(!state.dogWrapped){oval(p.x+6,p.y-12,9,5,'#fff9e8','#d9d5bd');line(p.x+6,p.y-16,p.x+6,p.y-8,'#c8c8b2',1);}
-  else line(p.x-6,p.y-17,p.x+14,p.y-3,'#f4d58a',3);
-  if(dogOpen())dotted(mouth.x,mouth.y,32,'#9aaf73');
+  // One continuous palm silhouette, two pinching fingers and a fingernail.
+  path(c=>{c.moveTo(77,502);c.bezierCurveTo(123,477,p.x-119,p.y+56,p.x-63,p.y+32);c.quadraticCurveTo(p.x-42,p.y+43,p.x-19,p.y+29);c.quadraticCurveTo(p.x+5,p.y+26,p.x+8,p.y+12);c.quadraticCurveTo(p.x+8,p.y+2,p.x-7,p.y+2);c.lineTo(p.x-38,p.y+5);c.quadraticCurveTo(p.x-45,p.y-1,p.x-28,p.y-4);c.lineTo(p.x+7,p.y-5);c.quadraticCurveTo(p.x+20,p.y-12,p.x+8,p.y-20);c.quadraticCurveTo(p.x-21,p.y-29,p.x-53,p.y-12);c.bezierCurveTo(p.x-99,p.y+3,119,439,77,450);c.closePath()},shade(p.y-24,150,'#f6c89e','#d69c75'),'#bf8965',2);
+  path(c=>{c.moveTo(p.x-58,p.y+4);c.quadraticCurveTo(p.x-53,p.y+27,p.x-32,p.y+27);c.moveTo(p.x-36,p.y+8);c.quadraticCurveTo(p.x-24,p.y+13,p.x-9,p.y+9)},null,'#d29b76',2);
+  oval(p.x-5,p.y+12,11,7,'#f4d5b8','#d9ae8e');line(p.x-10,p.y+16,p.x+3,p.y+16,'#fff0d8',1);
+  path(c=>{c.moveTo(p.x-19,p.y-23);c.lineTo(p.x+12,p.y-28);c.lineTo(p.x+24,p.y-16);c.lineTo(p.x-7,p.y-11);c.closePath()},'#ffe9a5','#c3a258',1.5);
+  path(c=>{c.moveTo(p.x-19,p.y-23);c.lineTo(p.x-7,p.y-11);c.lineTo(p.x-6,p.y+10);c.lineTo(p.x-19,p.y-1);c.closePath()},'#dab35d','#c3a258',1.5);
+  path(c=>{c.moveTo(p.x-7,p.y-11);c.lineTo(p.x+24,p.y-16);c.lineTo(p.x+22,p.y+5);c.lineTo(p.x-6,p.y+10);c.closePath()},shade(p.y-16,27,'#f8d985','#e6be64'),'#c3a258',1.5);
+  oval(p.x+13,p.y-2,3.5,3,'#d5aa54');oval(p.x-1,p.y+3,2.5,2,'#dbb25d');
+  if(!state.dogWrapped){ctx.save();ctx.translate(p.x+3,p.y-17);ctx.rotate(-.2);oval(0,0,11,6,'#fffbea','#c9c8b3');line(0,-4,0,4,'#d3d2bc',1);ctx.restore();}
+  else path(c=>{c.moveTo(p.x-3,p.y-17);c.quadraticCurveTo(p.x+6,p.y-27,p.x+15,p.y-19)},null,'#ffe5a0',5);
+  if(dogOpen())dotted(mouth.x,mouth.y,32,'#8fa56b');
  }
  if(state.dogStage==='spit'){
-  const t=clamp(1-state.dogWait/1.4,0,1);oval(564+dx-95*t,355+dy+132*t*t,11,6,'#fffae9','#c6c7ac');
+  const t=clamp(1-state.dogWait/1.4,0,1);ctx.save();ctx.translate(564+dx-95*t,355+dy+132*t*t);ctx.rotate(t*4);oval(0,0,11,6,'#fffae9','#c6c7ac');line(0,-4,0,4,'#d6d0b6',1);ctx.restore();
  }
  const labels={offer:state.dogTurn>0?'SE HIZO EL DISTRAÍDO':dogOpen()?'ABRIÓ LA BOCA · ACERCÁ EL BOCADO':'UN BOCADITO, NADA MÁS',chew:'ESTÁ MASTICANDO…',check:'PARECE QUE SÍ. ESPERÁ UN INSTANTE.',spit:'EL QUESO DESAPARECIÓ. LA PASTILLA NO.',done:'AHORA SÍ.'};
  pill(450,557,labels[state.dogStage]);text(450,590,'Deslizá despacio y esperá a que abra la boca.',15);
