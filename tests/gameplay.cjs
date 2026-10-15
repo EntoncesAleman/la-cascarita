@@ -305,3 +305,14 @@ test('all thirteen extra bomb controls respond without resetting the hidden dead
  h.step(remaining);assert.equal(h.run('state.outcome'),'exploded');
  h.run("init('bomb')");assert.equal(h.run('state.bombCode'),'');assert(h.run('state.bombSwitches.every(v=>!v)'));assert(h.run('state.bombKnobs.every(v=>v===0)'));
 });
+
+test('USB lights distinguish neutral, wrong port, face, alignment, speed and connected states',()=>{
+ const h=setup();h.run("init('usb');inputType='mouse';state.motion=0");assert.equal(h.run('usbSignal(cable()).status'),'off');
+ h.run('cable().face=state.usbPorts[cable().port].face;cable().position={...socket(cable().port)}');assert.equal(h.run('usbSignal(cable()).status'),'green');
+ h.run('cable().face=1-cable().face');assert.equal(h.run('usbSignal(cable()).status'),'red');assert.match(h.run('usbSignal(cable()).message'),/Girá/);
+ h.run('cable().face=1-cable().face;cable().position={...socket((cable().port+1)%3)}');assert.equal(h.run('usbSignal(cable()).status'),'red');assert.match(h.run('usbSignal(cable()).message'),/otro puerto/);
+ h.run('cable().position={...socket(cable().port)};state.usbPorts[cable().port].occupiedBy=1');assert.match(h.run('usbSignal(cable()).message'),/ocupado/);
+ h.run('state.usbPorts[cable().port].occupiedBy=null;cable().position.y+=20');assert.match(h.run('usbSignal(cable()).message'),/alineá/);
+ h.run('cable().position={...socket(cable().port)};state.motion=120');assert.match(h.run('usbSignal(cable()).message'),/despacio/);
+ h.run('state.motion=0;dockCable()');assert.equal(h.run('usbSignal(cable()).status'),'green');
+});
