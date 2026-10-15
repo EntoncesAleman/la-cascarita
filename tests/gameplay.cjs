@@ -165,13 +165,13 @@ test('bomb buttons respond and pliers cut individual wires through tap or drag',
  h.fire('pointerdown',787,350);h.fire('pointercancel',500,300);assert(!h.run('state.bombCuts[2]'));
  assert(!h.run('state.finished'));assert(h.run('state.progress')<1);
 });
-test('ten catalog entries link to existing game artwork without revealing the bomb trick',()=>{
- const html=fs.readFileSync(path.join(root,'index.html'),'utf8');assert.equal((html.match(/class="game-card"/g)||[]).length,10);
- for(const mode of ['leaf','bomb','sweep','sushi']){assert(html.includes('data-open="'+mode+'"'));for(const width of [480,960]){assert(html.includes('assets/'+mode+'-'+width+'.webp'));assert(fs.existsSync(path.join(root,'assets',mode+'-'+width+'.webp')));}}
+test('eleven catalog entries link to existing game artwork without revealing the bomb trick',()=>{
+ const html=fs.readFileSync(path.join(root,'index.html'),'utf8');assert.equal((html.match(/class="game-card"/g)||[]).length,11);
+ for(const mode of ['leaf','bomb','sweep','sushi','dog']){assert(html.includes('data-open="'+mode+'"'));for(const width of [480,960]){assert(html.includes('assets/'+mode+'-'+width+'.webp'));assert(fs.existsSync(path.join(root,'assets',mode+'-'+width+'.webp')));}}
  const card=html.split('data-open="bomb"')[0].split('<article').pop();assert(!/imposible|sin solución|siempre explota/i.test(card));
 });
-test('random sneeze affects the other eight arcade games only near completion',()=>{
- const situations={sushi:'state.sushiHeld=true;sushiPiece().position={x:600,y:350}',sweep:'state.progress=.9',tape:'state.peel=.9',usb:'state.usbCables[0].connected=true;state.usbCables[1].connected=true;state.activeCable=2;state.dockHold=.6',sheet:'sheetKeys=new Set([0,1,2,3]);syncSheet();state.sheetHold=1',screw:'state.tightness=.99',needle:"state.threadStage='through'",leaf:'state.leafAttached=true'};
+test('random sneeze affects the other nine arcade games only near completion',()=>{
+ const situations={dog:"state.dogStage='check'",sushi:'state.sushiHeld=true;sushiPiece().position={x:600,y:350}',sweep:'state.progress=.9',tape:'state.peel=.9',usb:'state.usbCables[0].connected=true;state.usbCables[1].connected=true;state.activeCable=2;state.dockHold=.6',sheet:'sheetKeys=new Set([0,1,2,3]);syncSheet();state.sheetHold=1',screw:'state.tightness=.99',needle:"state.threadStage='through'",leaf:'state.leafAttached=true'};
  for(const [mode,prepare]of Object.entries(situations)){
   const h=setup();h.run(`init('${mode}');state.sneeze.cooldown=0;state.sneeze.random=()=>0;pressed=true;state.grabbing=true;${prepare}`);h.run(`advance(.016,${h.time})`);assert.equal(h.run('state.sneeze.count'),1,mode);assert(h.run('state.sneeze.cooldown>=300&&state.sneeze.cooldown<=420'));assert(!h.run('state.grabbing'));
   if(mode==='tape')assert(h.run('state.peel<.5'));
@@ -240,7 +240,7 @@ test('sushi sneeze drops the held piece and can undo a final delivery',()=>{
  h.run("init('sushi');for(const c of state.sushiPieces)c.delivered=true;state.sushiActive=2;state.sneeze.cooldown=0;state.sneeze.random=()=>0;win()");assert(!h.run('state.finished'));assert.equal(h.run('state.sushiPieces.filter(c=>c.delivered).length'),2);
 });
 test('all scenes render after interaction and tool changes',()=>{
- const h=setup();for(const mode of ['tape','usb','sheet','screw','needle','leaf','bomb','sweep','sushi'])h.run(`init('${mode}');scene()`);const e=setup(true);e.run("reset();draw(.016);tool='spoon';draw(.016);tool='tweezers';draw(.016)");
+ const h=setup();for(const mode of ['tape','usb','sheet','screw','needle','leaf','bomb','sweep','sushi','dog'])h.run(`init('${mode}');scene()`);const e=setup(true);e.run("reset();draw(.016);tool='spoon';draw(.016);tool='tweezers';draw(.016)");
 });
 
 test('sneeze initial and repeat waits range from five to seven minutes',()=>{
@@ -315,4 +315,20 @@ test('USB lights distinguish neutral, wrong port, face, alignment, speed and con
  h.run('state.usbPorts[cable().port].occupiedBy=null;cable().position.y+=20');assert.match(h.run('usbSignal(cable()).message'),/alineá/);
  h.run('cable().position={...socket(cable().port)};state.motion=120');assert.match(h.run('usbSignal(cable()).message'),/despacio/);
  h.run('state.motion=0;dockCable()');assert.equal(h.run('usbSignal(cable()).status'),'green');
+});
+
+test('dog touch moves the cheese relatively and rejects only a rushed close approach',()=>{
+ const h=setup();h.run("init('dog')");h.fire('pointerdown',90,200);h.setTime(h.time+50);h.fire('pointermove',95,203);assert.equal(h.run('state.dogHand.x'),225);assert.equal(h.run('state.dogHand.y'),403);
+ h.setTime(h.time+16);h.fire('pointermove',445,145);assert(h.run('state.fail')>0);assert(!h.run('state.grabbing'));h.fire('pointercancel',445,145);h.step(1.6);assert.equal(h.run('state.dogTurn'),0);
+});
+test('dog only takes cheese through an open mouth while held, then checks before victory',()=>{
+ const h=setup();h.run("init('dog');Math.random=()=>.99;state.dogClock=2.5;state.dogHand={...dogMouth()};pressed=true;state.grabbing=true");h.run('advanceDog(.1)');assert.equal(h.run('state.dogFeed'),0);
+ h.run('state.dogClock=.6;pressed=false');h.run('advanceDog(.1)');assert.equal(h.run('state.dogFeed'),0);
+ h.run('pressed=true;state.dogClock=.6;state.dogHand={...dogMouth()}');h.step(.55);assert.equal(h.run('state.dogStage'),'chew');assert(!h.run('state.finished'));
+ h.step(1.3);assert.equal(h.run('state.dogStage'),'check');assert(!h.run('state.finished'));h.step(1.7);assert.equal(h.run('state.outcome'),'won');
+});
+test('dog can eat cheese and spit the pill, with a clean retry and optional wrapping',()=>{
+ const h=setup();h.run("init('dog');Math.random=()=>0;state.dogClock=.6;state.dogHand={...dogMouth()};pressed=true;state.grabbing=true");h.step(.55);h.fire('pointerup',564,341);h.step(1.3);h.step(1.7);assert.equal(h.run('state.dogStage'),'spit');assert(!h.run('state.finished'));assert(h.run('state.fail')>0);
+ h.step(1.5);assert.equal(h.run('state.dogStage'),'offer');assert.equal(h.run('state.dogHand.x'),220);
+ h.els.cheese.onclick();assert(h.run('state.dogWrapped'));h.run("init('dog')");assert(!h.run('state.dogWrapped'));assert.equal(h.run('state.dogStage'),'offer');
 });

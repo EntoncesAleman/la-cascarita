@@ -1,6 +1,7 @@
 'use strict';
 const $=id=>document.getElementById(id),canvas=$('scene'),ctx=canvas.getContext('2d');
 const defs={
+ dog:{title:'Abrí grande.',label:'UN PERRO. UN BOCADITO.',instructions:'Arrastrá desde cualquier parte para acercar el queso despacio. Esperá a que abra la boca y sostené el bocado un instante. Después, esperá para comprobar que se lo comió.',quote:'“Dale su remedio. Es un momentito.”',meter:'BOCADO ACEPTADO'},
  sushi:{title:'Con mucho cuidado.',label:'TRES PIEZAS. DOS PALITOS.',instructions:'Sostené una pieza un instante para tomarla con los palitos. Arrastrala despacio hasta el plato de la derecha y soltá. Si la sacudís, la soltás antes de tiempo o apretás demasiado rato, se desarma.',quote:'“Es solo pasarla de un plato a otro.”',meter:'PIEZAS ENTERAS'},
  sweep:{title:'La última barrida.',label:'UNA ESCOBA. UNA PALA.',instructions:'Arrastrá desde cualquier parte para mover la escoba. Juntá la basura y empujala hacia la boca de la pala, a la derecha. Cuando esté todo junto, levantá la pala.',quote:'“Una última pasada y termino.”',meter:'PISO BARRIDO'},
  leaf:{title:'Un poquito de verde.',label:'UN DIENTE. UNA HOJITA.',instructions:'Arrastrá desde cualquier parte para mover la lengua. Apoyala despacio sobre la hojita hasta despegarla y después bajala sin apurarte. Si la empujás de golpe, vuelve a meterse.',quote:'“Debe ser un poquito de perejil.”',meter:'HOJITA DESPEGADA'},
@@ -24,8 +25,8 @@ function init(m){
  document.body.classList.add('is-playing');mode=m;sheetPointers.clear();sheetKeys.clear();sneezeBlockedKeys.clear();activePointer=null;pressed=false;origin=null;lastPointer=null;tick=0;mx=190;my=310;
  state={attempts:0,elapsed:0,started:performance.now(),finished:false,progress:0,heat:0,fail:0,grabbing:false,penalty:0,noticeTime:0,tipAngle:rand(-1.8,1.8),peel:0,rotation:0,position:{x:170,y:330},fitted:[false,false,false,false],stripped:0,angle:null,thread:{x:175,y:350},wetUntil:0,threadHold:0,needleWobble:0,motion:0,peelStart:0,peelSpan:200,tapeGrip:0,dockHold:0,socketFace:Math.floor(rand(0,2)),cornerIndex:null,cornerHold:0,lastCorner:null,sheetHold:0,threadStage:'approach',threadInsertion:0,tightness:0,woodDamage:0,woodBroken:false,outcome:null,screwHint:'loose',tongue:{x:450,y:425},leaf:{x:494,y:267},leafLoosen:0,leafAttached:false,bombRemaining:0,bombStarted:false,bombTool:false,bombCuts:[false,false,false,false],bombFeedback:0,bombDial:0,bombButton:false,bombKnobs:[0,0],bombSwitches:[false,false,false],bombAux:[false,false],bombCode:'',bombKey:-1,bombChoice:null,bombMessage:'Panel en espera',sneeze:Sneeze.create(),broom:{x:280,y:430},dust:[],dustCollected:0,sweepRounds:0};
  if(m==='sweep')state.dust=floorDust();
- if(m==='usb')createUSB();if(m==='sushi')createSushi();
- $('hero').style.display='none';$('catalog').style.display='none';$('arcade').classList.add('visible');$('game-title').textContent=defs[m].title.toUpperCase();$('game-subtitle').textContent='Dificultad estimada: baja';$('input-help').textContent={sushi:'Sostené para agarrar, llevá despacio y soltá sobre el plato. No aprietes de más.',sweep:'Barré hacia la pala de la derecha. Después, levantala.',leaf:'Deslizá para mover la lengua. Despegá la hojita y bajala despacio.',bomb:'Revisá el panel y elegí un ajuste. Todavía hay tiempo.',tape:'Sostené la pestaña un instante. Tirones cortos a la derecha; soltá y repetí.',usb:'Conectá los tres cables. Probá puertos: los colores pueden engañar.',sheet:'Un dedo en cada esquina: sostené los cuatro a la vez. En compu: A + S + K + L.',screw:'Girá despacio y soltá en el punto justo. Una vuelta de más puede partir la madera.',needle:'Mové el hilo desde cualquier parte. Atravesá el ojo de izquierda a derecha.'}[m];
+ if(m==='dog')createDog();if(m==='usb')createUSB();if(m==='sushi')createSushi();
+ $('hero').style.display='none';$('catalog').style.display='none';$('arcade').classList.add('visible');$('game-title').textContent=defs[m].title.toUpperCase();$('game-subtitle').textContent='Dificultad estimada: baja';$('input-help').textContent={dog:'Deslizá despacio. Esperá a que abra la boca y sostené el bocado.',sushi:'Sostené para agarrar, llevá despacio y soltá sobre el plato. No aprietes de más.',sweep:'Barré hacia la pala de la derecha. Después, levantala.',leaf:'Deslizá para mover la lengua. Despegá la hojita y bajala despacio.',bomb:'Revisá el panel y elegí un ajuste. Todavía hay tiempo.',tape:'Sostené la pestaña un instante. Tirones cortos a la derecha; soltá y repetí.',usb:'Conectá los tres cables. Probá puertos: los colores pueden engañar.',sheet:'Un dedo en cada esquina: sostené los cuatro a la vez. En compu: A + S + K + L.',screw:'Girá despacio y soltá en el punto justo. Una vuelta de más puede partir la madera.',needle:'Mové el hilo desde cualquier parte. Atravesá el ojo de izquierda a derecha.'}[m];
  $('task-image').src='assets/'+m+'-960.webp';$('task-image').alt=defs[m].title;$('task-caption').textContent=defs[m].title;
  $('canvas-label').textContent=defs[m].label;$('instructions').textContent=defs[m].instructions;$('meter-label').textContent=defs[m].meter;
  $('overlay').classList.remove('on');setQuote(defs[m].quote);actions();location.hash=m;
@@ -33,6 +34,7 @@ function init(m){
 }
 function actions(){
  let html='';
+ if(mode==='dog')html='<button id="cheese">Envolver en más queso</button>';
  if(mode==='sweep')html='<button id="lift-pan">Levantar la pala</button>';
  if(mode==='bomb')html='<button id="pliers">Usar pinzas</button><button id="manual">Consultar instrucciones</button><button id="verify">Validar panel</button>';
  if(mode==='usb')html='<button id="rotate">↻ Girar conector</button>';
@@ -42,6 +44,7 @@ function actions(){
  if(mode==='screw')html='<button id="steady">Respirar un segundo</button>';
  $('actions').innerHTML=html;
  const bind=(id,fn)=>{const n=$(id);if(n)n.onclick=fn};
+ bind('cheese',()=>{if(state.dogStage!=='offer'||state.finished)return;state.dogWrapped=true;setQuote('“Ahora sí que parece solamente queso.”');});
  bind('lift-pan',liftDustpan);
  bind('pliers',()=>bombAction('pliers'));
  bind('manual',()=>bombAction('manual'));bind('verify',()=>bombAction('check'));
@@ -168,6 +171,38 @@ function moveTongue(p,speed){
  if(state.leafAttached){if(speed>210){slipLeaf();return}state.leaf={...state.tongue};if(state.tongue.y>470){win();return}}
  else if(distance(state.tongue,state.leaf)<65&&speed>170)slipLeaf();
 }
+function createDog(){
+ state.dogHand={x:220,y:400};state.dogStage='offer';state.dogClock=0;state.dogTurn=0;state.dogSuspicion=0;state.dogFeed=0;state.dogWait=0;state.dogWrapped=false;state.dogSpit=false;
+}
+function dogMouth(){return{x:564+Math.sin(state.dogClock*1.1)*13+(state.dogTurn>0?38:0),y:341+Math.sin(state.dogClock*1.7)*9}}
+function dogOpen(){return state.dogStage==='offer'&&state.dogTurn===0&&Math.sin(state.dogClock*1.7)>.25}
+function dogRefuse(message){
+ state.dogTurn=1.5;state.dogSuspicion=.8;state.dogFeed=0;state.dogHand={x:220,y:400};state.grabbing=false;state.fail++;state.noticeTime=4;state.progress=0;setQuote(message||'“Se dio vuelta. No vio nada, seguro.”');
+}
+function moveDog(p,speed){
+ if(state.dogStage!=='offer')return;
+ state.dogHand={x:clamp(p.x,145,720),y:clamp(p.y,175,495)};
+ if(distance(state.dogHand,dogMouth())<145&&speed>(inputType==='mouse'?330:250))dogRefuse('“Ese movimiento fue sospechoso.”');
+}
+function advanceDog(dt){
+ state.dogClock+=dt;state.dogTurn=Math.max(0,state.dogTurn-dt);state.dogSuspicion=Math.max(0,state.dogSuspicion-dt*.15);
+ if(state.dogStage==='chew'||state.dogStage==='check'){
+  state.dogWait-=dt;
+  if(state.dogWait<=0&&state.dogStage==='chew'){state.dogStage='check';state.dogWait=1.6;state.progress=.95;setQuote('“Parece que la tragó. Esperá un segundo…”');}
+  else if(state.dogWait<=0){
+   if(state.dogSpit){state.dogStage='spit';state.dogWait=1.4;state.progress=.15;state.fail++;state.noticeTime=4;setQuote('“El queso sí. La pastilla está en el piso.”');}
+   else{state.dogStage='done';win();}
+  }return;
+ }
+ if(state.dogStage==='spit'){state.dogWait-=dt;if(state.dogWait<=0){state.dogStage='offer';state.dogHand={x:220,y:400};state.dogFeed=0;state.progress=0;}return;}
+ if(state.dogStage!=='offer')return;
+ const near=distance(state.dogHand,dogMouth())<34;
+ if(pressed&&state.grabbing&&near&&dogOpen()&&state.motion<100){
+  state.dogFeed=Math.min(.5,state.dogFeed+dt);state.progress=state.dogFeed/.5*.8;
+  if(state.dogFeed>=.5){state.dogStage='chew';state.dogWait=1.25;state.dogSpit=Math.random()<(state.dogWrapped?.4:.7);state.dogWrapped=false;state.grabbing=false;state.progress=.85;setQuote('“Agarró el bocado. Ahora, a esperar.”');}
+ }else{state.dogFeed=Math.max(0,state.dogFeed-dt*2);state.progress=state.dogFeed/.5*.8;}
+}
+
 const bombExtras=[
  ...Array.from({length:6},(_,i)=>({kind:'key',id:i,x:202+(i%2)*42,y:274+Math.floor(i/2)*44,r:20})),
  ...[275,320,365].map((y,id)=>({kind:'switch',id,x:665,y,r:20})),
@@ -295,6 +330,7 @@ function down(e){
  const p=point(e);pressed=true;origin=p;lastPointer=p;tick=performance.now();state.motion=0;mx=p.x;my=p.y;grabOffset={x:0,y:0};
  if(mode==='sushi'){const pieces=state.sushiPieces.filter(c=>!c.delivered&&!c.broken).sort((a,b)=>distance(p,a.position)-distance(p,b.position)),c=pieces[0];if(c&&distance(p,c.position)<touchRadius(23,60)){state.sushiActive=c.id;state.grabbing=true;state.sushiGrip=0;state.sushiPressure=0;grabOffset={x:c.position.x-p.x,y:c.position.y-p.y};setQuote('“Cerrá los palitos despacio…”')}else setQuote('“Elegí una de las piezas de la tabla.”');}
  if(mode==='sweep'){state.grabbing=true;grabOffset={x:state.broom.x-p.x,y:state.broom.y-p.y};state.attempts++;}
+ if(mode==='dog'&&state.dogStage==='offer'){state.grabbing=true;grabOffset={x:state.dogHand.x-p.x,y:state.dogHand.y-p.y};state.attempts++;}
  if(mode==='leaf'){state.grabbing=true;grabOffset={x:state.tongue.x-p.x,y:state.tongue.y-p.y};state.attempts++;}
  if(mode==='bomb')bombTouch(p);
  if(mode==='tape'){const tip=tapeGeometry().tip;if(distance(p,tip)<touchRadius(22,37)){state.grabbing=true;state.tapeGrip=0;state.peelStart=state.peel;state.peelSpan=Math.max(80,Math.min(200,W-p.x-28));mx=tip.x;my=tip.y;grabOffset={x:tip.x-p.x,y:tip.y-p.y};setQuote('“La agarraste. Tirones cortos, sin apurarte.”')}else failure('“Eso no era la punta.”')}
@@ -341,6 +377,7 @@ function move(e){
  if(mode==='needle')moveThread(p,dt,speed,now);
  if(mode==='leaf')moveTongue(p,speed);
  if(mode==='sweep')moveBroom(p);
+ if(mode==='dog')moveDog(p,speed);
  if(mode==='sushi')moveSushi(p,speed);
 }
 function updateWood(){
@@ -367,6 +404,7 @@ function up(e){
 function almostThere(){
  if(!state||state.finished||state.penalty>0)return false;
  if(mode==='bomb')return false;
+ if(mode==='dog')return state.dogStage==='check'||state.dogFeed>.35;
  if(mode==='sheet')return state.fitted.every(Boolean)&&state.sheetHold>.65;
  if(!pressed||!state.grabbing)return false;
  if(mode==='sushi')return state.sushiHeld&&sushiPiece().position.x>490;
@@ -389,6 +427,7 @@ function sneezeImpact(){
  if(mode==='tape'){state.peel=Math.max(0,state.peel-.48);state.progress=state.peel;}
  if(mode==='usb'){const c=cable();if(c){if(c.connected){c.connected=false;state.usbPorts[c.port].occupiedBy=null;}c.position={...c.home};}state.progress=state.usbCables.filter(c=>c.connected).length/3;}
  if(mode==='needle'){state.thread={x:175,y:350};state.threadStage='approach';state.threadInsertion=0;state.progress=0;}
+ if(mode==='dog'){state.dogStage='offer';state.dogHand={x:220,y:400};state.dogFeed=0;state.dogWait=0;state.progress=0;}
  if(mode==='leaf'){state.leaf={x:494,y:267};state.tongue={x:450,y:425};state.leafAttached=false;state.leafLoosen=0;state.progress=0;}
  if(mode==='sheet')state.progress=0;
  if(mode==='screw'){state.tightness+=.34;updateWood();}
@@ -402,6 +441,7 @@ function advance(dt,now){
  if(state.finished)return;
  state.elapsed=mode==='bomb'?(state.bombStarted?state.elapsed+dt:0):(now-state.started)/1000;state.penalty=Math.max(0,state.penalty-dt);state.heat=Math.max(0,state.heat-dt*.045);
  if(now-tick>100)state.motion=0;
+ if(mode==='dog'){advanceDog(dt);return}
  if(mode==='sushi'){advanceSushi(dt);return}
  if(mode==='bomb'){
  state.bombFeedback=Math.max(0,state.bombFeedback-dt);
@@ -450,8 +490,8 @@ function scene(){
  // Flat vector work surface, with generous space around the contact points.
  rect(35,74,830,542,28,'#c9bb9766');rect(35,65,830,542,26,shade(65,542,'#fff8e6','#f3e8cd'),'#e0cfaa');
  line(65,67,835,67,'#fffdf3',3);
- if(mode==='tape')drawTape();if(mode==='usb')drawUSB();if(mode==='sheet')drawSheet();if(mode==='screw')drawScrew();if(mode==='needle')drawNeedle();if(mode==='leaf')drawLeaf();if(mode==='bomb')drawBomb();if(mode==='sweep')drawSweep();if(mode==='sushi')drawSushi();
- if(state.noticeTime>0){rect(280,77,340,36,18,'#f5e0d0');text(450,101,mode==='tape'?'La cinta se soltó. Volvé a la pestaña.':mode==='leaf'?'Se escapó la hojita. Probá más suave.':mode==='sushi'?'Se desarmó. Probá con otra pieza.':'Volvé a intentar, despacio.',14,'#9a4d32')}
+ if(mode==='dog')drawDog();if(mode==='tape')drawTape();if(mode==='usb')drawUSB();if(mode==='sheet')drawSheet();if(mode==='screw')drawScrew();if(mode==='needle')drawNeedle();if(mode==='leaf')drawLeaf();if(mode==='bomb')drawBomb();if(mode==='sweep')drawSweep();if(mode==='sushi')drawSushi();
+ if(state.noticeTime>0){rect(280,77,340,36,18,'#f5e0d0');text(450,101,mode==='tape'?'La cinta se soltó. Volvé a la pestaña.':mode==='leaf'?'Se escapó la hojita. Probá más suave.':mode==='sushi'?'Se desarmó. Probá con otra pieza.':mode==='dog'?'El queso sí. La pastilla, todavía no.':'Volvé a intentar, despacio.',14,'#9a4d32')}
  Sneeze.draw(ctx,state.sneeze,W,H);
  ctx.restore();
 }
@@ -672,6 +712,46 @@ function drawBomb(){
  path(c=>{c.moveTo(-7,6);c.lineTo(-23,-30);c.lineTo(-7,-18);c.lineTo(0,-4);c.lineTo(7,-18);c.lineTo(23,-30);c.lineTo(7,6);c.closePath()},'#b8c1b2','#657c71',2);circle(0,7,7,'#d1b77e','#687a6b');ctx.restore();
  if(!state.grabbing)text(787,435,state.bombTool?'PINZAS LISTAS':'PINZAS',13,'#607a65');
  pill(450,557,state.bombFeedback>0?'SEÑAL ESTABLE · REVISANDO':'PANEL EN ESPERA');text(450,590,'Botones, teclas, perillas… Alguna combinación debe servir.',16);
+}
+
+function drawDog(){
+ // Soft vector living room, dog silhouette and a hand holding a tiny cheese parcel.
+ rect(100,147,685,325,28,shade(147,325,'#c5d0a8','#8fa582'),'#8c9e7a');
+ rect(105,335,675,155,25,shade(335,155,'#b0bf96','#839b79'),'#82966f');
+ rect(115,155,172,171,26,'#ded9b9','#afb18f');line(139,176,260,304,'#c4c5a0',3);line(260,176,139,304,'#c4c5a0',3);
+ oval(623,508,155,20,'#aa98784a');oval(672,437,99,77,shade(360,150,'#cb9b63','#a8784b'),'#a47d51');
+ path(c=>{c.moveTo(735,460);c.quadraticCurveTo(809,405,782,376)},null,'#b88855',24);
+ oval(620,493,41,20,'#e2bd83','#b68a5a');oval(708,493,41,20,'#e2bd83','#b68a5a');
+ rect(595,380,126,22,10,'#658e78','#53775e');circle(655,408,11,'#e7c66f','#b49450');
+ const mouth=dogMouth(),dx=mouth.x-564,dy=mouth.y-341;ctx.save();ctx.translate(dx,dy);
+ oval(649,296,122,127,shade(170,245,'#e1b176','#bb874f'),'#aa7c4e');
+ path(c=>{c.moveTo(560,211);c.bezierCurveTo(509,176,504,326,537,342);c.quadraticCurveTo(576,337,586,234);c.closePath()},shade(197,150,'#a97547','#805a3f'),'#89603f');
+ path(c=>{c.moveTo(725,205);c.bezierCurveTo(793,184,801,334,766,346);c.quadraticCurveTo(723,337,713,230);c.closePath()},shade(197,150,'#a97547','#805a3f'),'#89603f');
+ oval(598,274,14,18,'#fff3d5');oval(685,268,14,18,'#fff3d5');
+ const glance=state.dogTurn>0?8:-3;oval(594+glance,275,8,11,'#45392f');oval(681+glance,269,8,11,'#45392f');circle(592+glance,272,3,'#fff9e6');circle(679+glance,266,3,'#fff9e6');
+ path(c=>{c.moveTo(578,247);c.quadraticCurveTo(596,234,612,245);c.moveTo(668,239);c.quadraticCurveTo(685,230,700,240)},null,'#926742',4);
+ oval(578,334,70,52,'#f3d7a4','#c89e6d');oval(583,308,26,17,'#4a4035','#6f5640');oval(575,302,10,4,'#7d6a52');
+ const open=dogOpen()||state.dogStage==='spit',chew=state.dogStage==='chew';
+ oval(564,341,37,open?22:chew?7+Math.sin(state.dogClock*17)*3:4,'#5b3a37');
+ if(open){oval(565,353,20,9,'#dc9995');line(563,351,564,357,'#b9777b',1.5);}
+ ctx.restore();
+ // A comfortable-sized hand makes the cheese position readable on mobile.
+ if(state.dogStage==='offer'){
+  const p=state.dogHand;
+  path(c=>{c.moveTo(77,485);c.bezierCurveTo(116,449,p.x-95,p.y+37,p.x-37,p.y+19)},null,'#b57d5d',52);
+  path(c=>{c.moveTo(77,480);c.bezierCurveTo(116,444,p.x-95,p.y+32,p.x-37,p.y+14)},null,'#edba8b',45);
+  oval(p.x-36,p.y+13,34,21,'#efbd91','#c78e69');
+  rect(p.x-31,p.y-7,48,17,8,'#f2c49b','#c78e69');rect(p.x-25,p.y+11,40,17,8,'#edba8a','#c78e69');
+  rect(p.x-13,p.y-22,33,28,5,shade(p.y-22,28,'#ffe4a0','#dfb562'),'#bc974f');circle(p.x-3,p.y-12,3,'#d2a85c');
+  if(!state.dogWrapped){oval(p.x+6,p.y-12,9,5,'#fff9e8','#d9d5bd');line(p.x+6,p.y-16,p.x+6,p.y-8,'#c8c8b2',1);}
+  else line(p.x-6,p.y-17,p.x+14,p.y-3,'#f4d58a',3);
+  if(dogOpen())dotted(mouth.x,mouth.y,32,'#9aaf73');
+ }
+ if(state.dogStage==='spit'){
+  const t=clamp(1-state.dogWait/1.4,0,1);oval(564+dx-95*t,355+dy+132*t*t,11,6,'#fffae9','#c6c7ac');
+ }
+ const labels={offer:state.dogTurn>0?'SE HIZO EL DISTRAÍDO':dogOpen()?'ABRIÓ LA BOCA · ACERCÁ EL BOCADO':'UN BOCADITO, NADA MÁS',chew:'ESTÁ MASTICANDO…',check:'PARECE QUE SÍ. ESPERÁ UN INSTANTE.',spit:'EL QUESO DESAPARECIÓ. LA PASTILLA NO.',done:'AHORA SÍ.'};
+ pill(450,557,labels[state.dogStage]);text(450,590,'Deslizá despacio y esperá a que abra la boca.',15);
 }
 
 function sushiShape(c){
