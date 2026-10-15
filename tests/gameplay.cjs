@@ -10,7 +10,7 @@ function setup(egg=false,width=360){
  vm.createContext(s);const source=egg?fs.readFileSync(path.join(root,'cascarita.html'),'utf8').split('<script>')[1].split('</script>')[0]:fs.readFileSync(path.join(root,'arcade.js'),'utf8');vm.runInContext(source,s);
  const run=code=>vm.runInContext(code,s);
  function fire(type,x,y,id=1,pointerType='touch'){
-  let prevented=false;const scale=width/(egg?1000:900),e={clientX:x*scale,clientY:y*scale,pointerId:id,pointerType,preventDefault(){prevented=true}};
+  let prevented=false;const scale=width/(egg?1000:900),e={clientX:x*scale,clientY:y*scale,pointerId:id,pointerType,type,preventDefault(){prevented=true}};
   for(const fn of listeners[type]||[])fn(e);return prevented;
  }
  function step(seconds){const n=Math.ceil(seconds*60);for(let i=0;i<n;i++){now+=seconds/n*1000;run(egg?`draw(${seconds/n})`:`advance(${seconds/n},${now})`);}}
@@ -84,6 +84,21 @@ test('desktop sheet requires A S K L held together',()=>{
 test('screw difficulty depends on angular speed, not pointer-event frequency',()=>{
  const progress=[];for(const hz of [30,120]){const h=setup();h.run("init('screw')");h.fire('pointerdown',520,330);for(let i=1;i<=hz*3;i++){const a=i/hz*3;h.setTime(h.time+1000/hz);h.fire('pointermove',450+70*Math.cos(a),330+70*Math.sin(a));}assert.equal(h.run('state.fail'),0);progress.push(h.run('state.progress'));}assert(Math.abs(progress[0]-progress[1])<.002);
  const h=setup();h.run("init('screw')");h.fire('pointerdown',520,330);h.setTime(h.time+16);h.fire('pointermove',450,400);assert(h.run('state.fail')>0);
+});
+test('screw only wins when released at the right tightness',()=>{
+ const h=setup();h.run("init('screw');state.tightness=.95");h.fire('pointerdown',520,330);
+ for(let i=1;i<=10;i++){h.setTime(h.time+40);h.fire('pointermove',450+70*Math.cos(i*.1),330+70*Math.sin(i*.1));}
+ assert(h.run('state.tightness>=screwLimits.ready'));assert(!h.run('state.finished'));h.fire('pointerup',520,330);assert.equal(h.run('state.outcome'),'won');
+});
+test('too much rotation cracks then breaks wood; releasing cannot turn a break into a win',()=>{
+ const h=setup();h.run("init('screw');state.tightness=1.07");h.fire('pointerdown',520,330);
+ for(let i=1;i<=65&&!h.run('state.finished');i++){h.setTime(h.time+40);h.fire('pointermove',450+70*Math.cos(i*.1),330+70*Math.sin(i*.1));if(i===10){assert(h.run('state.woodDamage>0'));assert(!h.run('state.finished'));}}
+ assert(h.run('state.woodBroken'));assert.equal(h.run('state.outcome'),'broken');h.fire('pointerup',520,330);assert.equal(h.run('state.outcome'),'broken');h.run("init('screw')");assert.equal(h.run('state.woodDamage'),0);assert(!h.run('state.woodBroken'));
+});
+test('backing off does not heal cracks, and cancelled contact never wins',()=>{
+ const h=setup();h.run("init('screw');state.tightness=1.16;updateWood()");const damage=h.run('state.woodDamage');h.fire('pointerdown',520,330);
+ for(let i=1;i<=25;i++){h.setTime(h.time+40);h.fire('pointermove',450+70*Math.cos(-i*.1),330+70*Math.sin(-i*.1));}
+ assert(h.run('state.tightness<1.08'));assert.equal(h.run('state.woodDamage'),damage);h.fire('pointercancel',520,330);assert(!h.run('state.finished'));
 });
 test('thread pickup works anywhere without moving or losing the tip',()=>{
  const h=setup();h.run("init('needle')");assert(h.fire('pointerdown',430,490));assert(h.run('state.grabbing'));assert.equal(h.run('state.fail'),0);assert.equal(h.run('state.thread.x'),175);
