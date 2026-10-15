@@ -275,3 +275,17 @@ test('red notices remain readable for four seconds without extending input penal
  h.run('slipLeaf()');h.step(2);h.run('slipLeaf()');assert.equal(h.run('state.noticeTime'),4);
  h.run("init('leaf')");assert.equal(h.run('state.noticeTime'),0);
 });
+
+test('desktop sushi tolerates mouse pickup jitter and moderate movement but still rejects jerks',()=>{
+ const h=setup(false,900);h.run("init('sushi')");
+ for(let id=0;id<3;id++){
+  const home=h.run(`state.sushiPieces[${id}].home`);
+  h.fire('pointerdown',home.x,home.y,1,'mouse');h.setTime(h.time+30);h.fire('pointermove',home.x+24,home.y,1,'mouse');assert(!h.run('sushiPiece().broken'));h.step(.4);
+  for(let i=1;i<=36;i++){
+   h.setTime(h.time+40);h.fire('pointermove',home.x+(680-home.x)*i/36,home.y+(350-home.y)*i/36,1,'mouse');h.run(`advance(.04,${h.time})`);
+  }
+  assert(!h.run('sushiPiece().broken'));h.fire('pointerup',680,350,1,'mouse');assert(h.run(`state.sushiPieces[${id}].delivered`));
+ }
+ assert.equal(h.run('state.outcome'),'won');
+ h.run("init('sushi')");h.fire('pointerdown',237,245,1,'mouse');h.step(.4);h.setTime(h.time+16);h.fire('pointermove',500,245,1,'mouse');assert(h.run('sushiPiece().broken'));
+});
