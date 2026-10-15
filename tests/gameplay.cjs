@@ -138,6 +138,29 @@ test('egg can be caught and carried using slow touch movement',()=>{
  }
  assert(h.run('won'),'carrying the shell slowly to the edge must win');
 });
+test('leaf can be loosened slowly and carried down by the tongue',()=>{
+ const h=setup();h.run("init('leaf')");h.fire('pointerdown',400,500);assert(h.run('state.grabbing'));assert.equal(h.run('state.tongue.x'),450);
+ let offset=h.run('grabOffset');
+ for(let i=1;i<=80;i++){const p={x:450+44*i/80,y:425-158*i/80};h.setTime(h.time+20);h.fire('pointermove',p.x-offset.x,p.y-offset.y);h.run(`advance(.02,${h.time})`);}
+ h.step(1.2);assert(h.run('state.leafAttached'));assert(!h.run('state.finished'));
+ for(let y=269;y<=485&&!h.run('state.finished');y+=2){h.setTime(h.time+25);h.fire('pointermove',494-offset.x,y-offset.y);h.run(`advance(.025,${h.time})`);}
+ assert.equal(h.run('state.outcome'),'won');
+});
+test('rushing the tongue makes the leaf slip back between the teeth',()=>{
+ const h=setup();h.run("init('leaf');state.tongue={x:494,y:267};state.leafLoosen=.7");h.fire('pointerdown',100,100);h.setTime(h.time+20);h.fire('pointermove',140,100);assert(h.run('state.fail')>0);assert(!h.run('state.leafAttached'));assert(h.run('state.leafLoosen<.7'));assert.equal(h.run('state.leaf.y'),267);
+});
+test('every bomb action offers false progress and then explodes without a winning path',()=>{
+ for(const action of ['wire','button','dial','manual','check']){const h=setup();h.run("init('bomb')");h.run(`bombAction('${action}')`);assert(!h.run('state.finished'));assert(h.run('state.progress')>.8);h.step(1.5);assert.equal(h.run('state.outcome'),'exploded');assert(h.run('state.progress')<1);}
+});
+test('bomb touch release cannot cancel the explosion and doing nothing also loses',()=>{
+ const h=setup();h.run("init('bomb')");h.fire('pointerdown',310,300);h.fire('pointerup',310,300);h.step(1.5);assert.equal(h.run('state.outcome'),'exploded');
+ h.run("init('bomb')");h.step(45.1);assert.equal(h.run('state.outcome'),'exploded');h.run("init('bomb')");assert.equal(h.run('state.bombPending'),0);assert.equal(h.run('state.bombRemaining'),45);assert.equal(h.run('state.outcome'),null);
+});
+test('eight catalog entries link to existing game artwork without revealing the bomb trick',()=>{
+ const html=fs.readFileSync(path.join(root,'index.html'),'utf8');assert.equal((html.match(/class="game-card"/g)||[]).length,8);
+ for(const mode of ['leaf','bomb']){assert(html.includes('data-open="'+mode+'"'));assert(fs.existsSync(path.join(root,'assets',mode+'.svg')));}
+ const card=html.split('data-open="bomb"')[0].split('<article').pop();assert(!/imposible|sin solución|siempre explota/i.test(card));
+});
 test('all scenes render after interaction and tool changes',()=>{
- const h=setup();for(const mode of ['tape','usb','sheet','screw','needle'])h.run(`init('${mode}');scene()`);const e=setup(true);e.run("reset();draw(.016);tool='spoon';draw(.016);tool='tweezers';draw(.016)");
+ const h=setup();for(const mode of ['tape','usb','sheet','screw','needle','leaf','bomb'])h.run(`init('${mode}');scene()`);const e=setup(true);e.run("reset();draw(.016);tool='spoon';draw(.016);tool='tweezers';draw(.016)");
 });
