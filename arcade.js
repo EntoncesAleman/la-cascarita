@@ -4,7 +4,7 @@ const defs={
  sushi:{title:'Con mucho cuidado.',label:'TRES PIEZAS. DOS PALITOS.',instructions:'Sostené una pieza un instante para tomarla con los palitos. Arrastrala despacio hasta el plato de la derecha y soltá. Si la sacudís, la soltás antes de tiempo o apretás demasiado rato, se desarma.',quote:'“Es solo pasarla de un plato a otro.”',meter:'PIEZAS ENTERAS'},
  sweep:{title:'La última barrida.',label:'UNA ESCOBA. UNA PALA.',instructions:'Arrastrá desde cualquier parte para mover la escoba. Juntá la basura y empujala hacia la boca de la pala, a la derecha. Cuando esté todo junto, levantá la pala.',quote:'“Una última pasada y termino.”',meter:'PISO BARRIDO'},
  leaf:{title:'Un poquito de verde.',label:'UN DIENTE. UNA HOJITA.',instructions:'Arrastrá desde cualquier parte para mover la lengua. Apoyala despacio sobre la hojita hasta despegarla y después bajala sin apurarte. Si la empujás de golpe, vuelve a meterse.',quote:'“Debe ser un poquito de perejil.”',meter:'HOJITA DESPEGADA'},
- bomb:{title:'Un ajuste pendiente.',label:'UN PANEL. UN PEQUEÑO AJUSTE.',instructions:'Probá los botones y el selector del panel. Elegí las pinzas y tocá un cable para cortarlo, o arrastralas desde la derecha hasta el cable. Revisá las señales después de cada ajuste.',quote:'“Parece bastante claro.”',meter:'VERIFICACIÓN'},
+ bomb:{title:'Un ajuste pendiente.',label:'UN PANEL. UN PEQUEÑO AJUSTE.',instructions:'Probá botones, teclas, perillas e interruptores del panel. Elegí las pinzas y tocá un cable para cortarlo, o arrastralas desde la derecha hasta el cable. Revisá las señales después de cada ajuste.',quote:'“Parece bastante claro.”',meter:'VERIFICACIÓN'},
  tape:{title:'Encontrá la punta.',label:'UN ROLLO. NADA MÁS.',instructions:'Agarrá la pestaña y hacé tirones cortos hacia la derecha. Podés soltar y volver a agarrar para seguir. Si tirás de golpe o te desviás, se corta.',quote:'“Seguro está por acá.”',meter:'CINTA DESPEGADA'},
  usb:{title:'Del otro lado.',label:'TRES CABLES. TRES PUERTOS.',instructions:'Conectá los tres cables. Elegí uno, giralo si hace falta y probá los puertos. Sus colores no garantizan que sean compatibles. Sostené cada conector alineado para enchufarlo.',quote:'“Probá del otro lado.”',meter:'CABLES CONECTADOS'},
  sheet:{title:'La sábana ajustable.',label:'UNA SÁBANA. CUATRO ESQUINAS.',instructions:'Poné un dedo en cada esquina y mantené los cuatro a la vez durante un momento. Si soltás uno, se escapa esa esquina. En computadora, mantené A, S, K y L simultáneamente.',quote:'“La primera ya estaba puesta.”',meter:'CUATRO ESQUINAS A LA VEZ'},
@@ -22,7 +22,7 @@ function setQuote(x){$('quote').textContent=x}
 function sound(){/* Diseño sin audio obligatorio */ }
 function init(m){
  document.body.classList.add('is-playing');mode=m;sheetPointers.clear();sheetKeys.clear();sneezeBlockedKeys.clear();activePointer=null;pressed=false;origin=null;lastPointer=null;tick=0;mx=190;my=310;
- state={attempts:0,elapsed:0,started:performance.now(),finished:false,progress:0,heat:0,fail:0,grabbing:false,penalty:0,noticeTime:0,tipAngle:rand(-1.8,1.8),peel:0,rotation:0,position:{x:170,y:330},fitted:[false,false,false,false],stripped:0,angle:null,thread:{x:175,y:350},wetUntil:0,threadHold:0,needleWobble:0,motion:0,peelStart:0,peelSpan:200,tapeGrip:0,dockHold:0,socketFace:Math.floor(rand(0,2)),cornerIndex:null,cornerHold:0,lastCorner:null,sheetHold:0,threadStage:'approach',threadInsertion:0,tightness:0,woodDamage:0,woodBroken:false,outcome:null,screwHint:'loose',tongue:{x:450,y:425},leaf:{x:494,y:267},leafLoosen:0,leafAttached:false,bombRemaining:0,bombStarted:false,bombTool:false,bombCuts:[false,false,false,false],bombFeedback:0,bombDial:0,bombButton:false,bombChoice:null,bombMessage:'Panel en espera',sneeze:Sneeze.create(),broom:{x:280,y:430},dust:[],dustCollected:0,sweepRounds:0};
+ state={attempts:0,elapsed:0,started:performance.now(),finished:false,progress:0,heat:0,fail:0,grabbing:false,penalty:0,noticeTime:0,tipAngle:rand(-1.8,1.8),peel:0,rotation:0,position:{x:170,y:330},fitted:[false,false,false,false],stripped:0,angle:null,thread:{x:175,y:350},wetUntil:0,threadHold:0,needleWobble:0,motion:0,peelStart:0,peelSpan:200,tapeGrip:0,dockHold:0,socketFace:Math.floor(rand(0,2)),cornerIndex:null,cornerHold:0,lastCorner:null,sheetHold:0,threadStage:'approach',threadInsertion:0,tightness:0,woodDamage:0,woodBroken:false,outcome:null,screwHint:'loose',tongue:{x:450,y:425},leaf:{x:494,y:267},leafLoosen:0,leafAttached:false,bombRemaining:0,bombStarted:false,bombTool:false,bombCuts:[false,false,false,false],bombFeedback:0,bombDial:0,bombButton:false,bombKnobs:[0,0],bombSwitches:[false,false,false],bombAux:[false,false],bombCode:'',bombKey:-1,bombChoice:null,bombMessage:'Panel en espera',sneeze:Sneeze.create(),broom:{x:280,y:430},dust:[],dustCollected:0,sweepRounds:0};
  if(m==='sweep')state.dust=floorDust();
  if(m==='usb')createUSB();if(m==='sushi')createSushi();
  $('hero').style.display='none';$('catalog').style.display='none';$('arcade').classList.add('visible');$('game-title').textContent=defs[m].title.toUpperCase();$('game-subtitle').textContent='Dificultad estimada: baja';$('input-help').textContent={sushi:'Sostené para agarrar, llevá despacio y soltá sobre el plato. No aprietes de más.',sweep:'Barré hacia la pala de la derecha. Después, levantala.',leaf:'Deslizá para mover la lengua. Despegá la hojita y bajala despacio.',bomb:'Revisá el panel y elegí un ajuste. Todavía hay tiempo.',tape:'Sostené la pestaña un instante. Tirones cortos a la derecha; soltá y repetí.',usb:'Conectá los tres cables. Probá puertos: los colores pueden engañar.',sheet:'Un dedo en cada esquina: sostené los cuatro a la vez. En compu: A + S + K + L.',screw:'Girá despacio y soltá en el punto justo. Una vuelta de más puede partir la madera.',needle:'Mové el hilo desde cualquier parte. Atravesá el ojo de izquierda a derecha.'}[m];
@@ -150,6 +150,12 @@ function moveTongue(p,speed){
  if(state.leafAttached){if(speed>210){slipLeaf();return}state.leaf={...state.tongue};if(state.tongue.y>470){win();return}}
  else if(distance(state.tongue,state.leaf)<65&&speed>170)slipLeaf();
 }
+const bombExtras=[
+ ...Array.from({length:6},(_,i)=>({kind:'key',id:i,x:202+(i%2)*42,y:274+Math.floor(i/2)*44,r:20})),
+ ...[275,320,365].map((y,id)=>({kind:'switch',id,x:665,y,r:20})),
+ ...[222,650].map((x,id)=>({kind:'knob',id,x,y:198,r:33})),
+ ...[210,255].map((x,id)=>({kind:'aux',id,x,y:450,r:20}))
+];
 const bombWires=[{x:310,color:'#d2746d'},{x:405,color:'#6ca6bd'},{x:500,color:'#dcb14e'},{x:595,color:'#9e94be'}];
 function bombAction(action,wireIndex=null){
  if(mode!=='bomb'||!state||state.finished)return;
@@ -161,10 +167,14 @@ function bombAction(action,wireIndex=null){
   if(wireIndex===null||state.bombCuts[wireIndex])return;
   state.bombCuts[wireIndex]=true;
  }
+ if(action==='knob')state.bombKnobs[wireIndex]=(state.bombKnobs[wireIndex]+1)%8;
+ if(action==='switch')state.bombSwitches[wireIndex]=!state.bombSwitches[wireIndex];
+ if(action==='aux')state.bombAux[wireIndex]=!state.bombAux[wireIndex];
+ if(action==='key'){state.bombKey=wireIndex;state.bombCode=(state.bombCode+(wireIndex+1)).slice(-6);}
  if(action==='button')state.bombButton=!state.bombButton;
  if(action==='dial')state.bombDial=(state.bombDial+1)%6;
  state.progress=Math.min(.97,state.progress+(action==='wire'?.18:.07));
- state.bombMessage={pliers:'Pinzas listas. Elegí un cable.',wire:'Cable cortado. La señal parece estable.',button:'Ajuste recibido. Indicador actualizado.',dial:'Frecuencia ajustada. Señal alineada.',manual:'Revisá cables, selector e indicadores.',check:'Señal estable. Queda un ajuste pendiente.'}[action]||'Revisando…';setQuote('“'+state.bombMessage+'”');
+ state.bombMessage={knob:'Selector calibrado. Revisá la otra señal.',switch:'Canal actualizado. Indicadores en línea.',aux:'Módulo auxiliar listo. Falta confirmar.',key:'Secuencia recibida. Comprobando combinación.',pliers:'Pinzas listas. Elegí un cable.',wire:'Cable cortado. La señal parece estable.',button:'Ajuste recibido. Indicador actualizado.',dial:'Frecuencia ajustada. Señal alineada.',manual:'Revisá cables, selector e indicadores.',check:'Señal estable. Queda un ajuste pendiente.'}[action]||'Revisando…';setQuote('“'+state.bombMessage+'”');
 }
 function explodeBomb(){
  if(!state||state.finished)return;state.finished=true;state.outcome='exploded';state.grabbing=false;state.progress=.99;state.fail++;
@@ -173,6 +183,7 @@ function explodeBomb(){
 }
 function bombWireAt(p){return p.y>=260&&p.y<=354?bombWires.findIndex(w=>Math.abs(p.x-w.x)<37):-1;}
 function bombTouch(p){
+ const extra=bombExtras.find(c=>distance(p,c)<c.r);if(extra){bombAction(extra.kind,extra.id);return;}
  const wire=bombWireAt(p);if(wire>=0){bombAction('wire',wire);return;}
  if(distance(p,{x:787,y:350})<65){bombAction('pliers');state.grabbing=true;return;}
  if(distance(p,{x:330,y:455})<48)bombAction('button');
@@ -607,7 +618,20 @@ function drawBomb(){
  oval(450,526,294,27,'#b19b7850');rect(168,137,564,384,24,'#8a8071','#6a6b59');rect(160,125,564,384,24,shade(125,384,'#c5c1a6','#9caa91'),'#6c8069');line(188,132,694,132,'#e5dfc3',4);
  for(const [x,y]of [[185,150],[699,150],[185,485],[699,485]]){circle(x,y,7,'#758a75','#e9e4c6');line(x-3,y,x+3,y,'#e9e4c6',2);}
  rect(285,154,315,84,12,'#42594a','#d6d5b4');
- text(442,207,state.bombFeedback>0?'SEÑAL OK':'EN LÍNEA',27,'#b6da97');
+ text(442,193,state.bombFeedback>0?'SEÑAL OK':'EN LÍNEA',23,'#b6da97');
+ text(442,223,state.bombCode||'— — — — — —',17,'#d4d99e');
+ for(const c of bombExtras){
+  if(c.kind==='key'){
+   const on=state.bombKey===c.id&&state.bombFeedback>0;rect(c.x-18,c.y-17,36,36,7,'#76816c');rect(c.x-18,c.y-20,36,34,7,on?'#e3c37e':'#e8e1c6','#8b987e');text(c.x,c.y+3,String(c.id+1),18,'#52634e');
+  }else if(c.kind==='switch'){
+   const on=state.bombSwitches[c.id];rect(c.x-18,c.y-18,36,36,9,'#74836d','#c8ceb0');rect(c.x-5,c.y-13,10,26,5,'#3c5248');circle(c.x,c.y+(on?-8:8),10,on?'#d6bb76':'#e0dec8','#879781');circle(c.x+27,c.y,4,on?'#e6cb7c':'#5c715d');
+  }else if(c.kind==='knob'){
+   const angle=state.bombKnobs[c.id]*Math.PI/4;circle(c.x,c.y,30,'#7d8f76','#e7dfbf',3);circle(c.x,c.y,22,shade(c.y-22,44,'#bdcaa3','#849c7c'),'#5e7a64');line(c.x,c.y,c.x+Math.sin(angle)*18,c.y-Math.cos(angle)*18,'#faf1ca',4);text(c.x,c.y+43,c.id?'GANANCIA':'MODO',10,'#546c54');
+  }else{
+   const on=state.bombAux[c.id];circle(c.x,c.y+3,19,'#6e7a65','#d1d6b6',2);circle(c.x,c.y,15,on?'#edcb6d':(c.id?'#b2a3c8':'#76a5ae'));text(c.x,c.y+5,c.id?'B':'A',12,'#fff4d4');
+  }
+ }
+ for(let i=0;i<8;i++){const on=(state.attempts+i)%3!==0;circle(387+i*22,492,4,on?'#dce5a1':'#6c806b');}
  bombWires.forEach((wire,i)=>{
   circle(wire.x-24,260,11,'#6b7962','#dae2c0');circle(wire.x+24,354,11,'#6b7962','#dae2c0');
   if(state.bombCuts[i]){
@@ -628,7 +652,7 @@ function drawBomb(){
  line(-5,5,-24,58,'#608779',13);line(5,5,24,58,'#608779',13);
  path(c=>{c.moveTo(-7,6);c.lineTo(-23,-30);c.lineTo(-7,-18);c.lineTo(0,-4);c.lineTo(7,-18);c.lineTo(23,-30);c.lineTo(7,6);c.closePath()},'#b8c1b2','#657c71',2);circle(0,7,7,'#d1b77e','#687a6b');ctx.restore();
  if(!state.grabbing)text(787,435,state.bombTool?'PINZAS LISTAS':'PINZAS',13,'#607a65');
- pill(450,557,state.bombFeedback>0?'SEÑAL ESTABLE · REVISANDO':'PANEL EN ESPERA');text(450,590,'Probá los botones. Usá las pinzas para cortar cables.',16);
+ pill(450,557,state.bombFeedback>0?'SEÑAL ESTABLE · REVISANDO':'PANEL EN ESPERA');text(450,590,'Botones, teclas, perillas… Alguna combinación debe servir.',16);
 }
 
 function sushiShape(c){

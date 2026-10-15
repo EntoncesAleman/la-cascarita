@@ -289,3 +289,19 @@ test('desktop sushi tolerates mouse pickup jitter and moderate movement but stil
  assert.equal(h.run('state.outcome'),'won');
  h.run("init('sushi')");h.fire('pointerdown',237,245,1,'mouse');h.step(.4);h.setTime(h.time+16);h.fire('pointermove',500,245,1,'mouse');assert(h.run('sushiPiece().broken'));
 });
+test('all thirteen extra bomb controls respond without resetting the hidden deadline',()=>{
+ const h=setup();h.run("init('bomb')");
+ const controls=h.run('bombExtras');assert.equal(controls.length,13);
+ for(const c of controls){
+  h.fire('pointerdown',c.x,c.y);h.fire('pointerup',c.x,c.y);
+  assert.equal(h.run('state.bombChoice'),c.kind);
+  if(c.kind==='key')assert(h.run('state.bombCode').endsWith(String(c.id+1)));
+  if(c.kind==='knob')assert.equal(h.run(`state.bombKnobs[${c.id}]`),1);
+  if(c.kind==='switch')assert(h.run(`state.bombSwitches[${c.id}]`));
+  if(c.kind==='aux')assert(h.run(`state.bombAux[${c.id}]`));
+ }
+ assert.equal(h.run('state.bombCode'),'123456');assert(!h.run('state.finished'));
+ const remaining=h.run('state.bombRemaining');h.step(1);h.fire('pointerdown',222,198);h.fire('pointerup',222,198);assert(Math.abs(h.run('state.bombRemaining')-remaining+1)<1e-8);
+ h.step(remaining);assert.equal(h.run('state.outcome'),'exploded');
+ h.run("init('bomb')");assert.equal(h.run('state.bombCode'),'');assert(h.run('state.bombSwitches.every(v=>!v)'));assert(h.run('state.bombKnobs.every(v=>v===0)'));
+});
