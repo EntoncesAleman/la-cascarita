@@ -7,7 +7,7 @@ function setup(egg=false,width=360){
  const canvas={style:{},width,height:width*(egg?735/1000:660/900),getContext:()=>ctx,getBoundingClientRect:()=>({left:0,top:0,width,height:width*(egg?735/1000:660/900)}),addEventListener:(name,fn)=>{(listeners[name]??=[]).push(fn)},setPointerCapture:noop,focus:noop};
  function el(id){return els[id]??={style:{},classList:{add:noop,remove:noop},textContent:'',innerHTML:'',setAttribute:noop};}
  const s={console,document:{body:{classList:{add:noop,remove:noop}},getElementById:id=>id==='scene'?canvas:el(id),querySelector:()=>canvas,querySelectorAll:()=>[]},window:{scrollTo:noop,addEventListener:noop,devicePixelRatio:1},performance:{now:()=>now},location:{hash:'',pathname:'/'},history:{replaceState:noop},localStorage:{getItem:()=>null,setItem:noop},requestAnimationFrame:noop,devicePixelRatio:1};
- vm.createContext(s);const source=egg?fs.readFileSync(path.join(root,'cascarita.html'),'utf8').split('<script>')[1].split('</script>')[0]:fs.readFileSync(path.join(root,'arcade.js'),'utf8');vm.runInContext(source,s);
+ vm.createContext(s);vm.runInContext(fs.readFileSync(path.join(root,'sneeze.js'),'utf8'),s);vm.runInContext('Sneeze.random=()=>1',s);const source=egg?fs.readFileSync(path.join(root,'cascarita.html'),'utf8').split('<script>')[1].split('</script>')[0]:fs.readFileSync(path.join(root,'arcade.js'),'utf8');vm.runInContext(source,s);
  const run=code=>vm.runInContext(code,s);
  function fire(type,x,y,id=1,pointerType='touch'){
   let prevented=false;const scale=width/(egg?1000:900),e={clientX:x*scale,clientY:y*scale,pointerId:id,pointerType,type,preventDefault(){prevented=true}};
@@ -160,6 +160,41 @@ test('eight catalog entries link to existing game artwork without revealing the 
  const html=fs.readFileSync(path.join(root,'index.html'),'utf8');assert.equal((html.match(/class="game-card"/g)||[]).length,8);
  for(const mode of ['leaf','bomb']){assert(html.includes('data-open="'+mode+'"'));assert(fs.existsSync(path.join(root,'assets',mode+'.svg')));}
  const card=html.split('data-open="bomb"')[0].split('<article').pop();assert(!/imposible|sin solución|siempre explota/i.test(card));
+});
+test('random sneeze affects all seven arcade games only near completion',()=>{
+ const situations={tape:'state.peel=.9',usb:'state.usbCables[0].connected=true;state.usbCables[1].connected=true;state.activeCable=2;state.dockHold=.6',sheet:'sheetKeys=new Set([0,1,2,3]);syncSheet();state.sheetHold=1',screw:'state.tightness=.99',needle:"state.threadStage='through'",leaf:'state.leafAttached=true',bomb:"bombAction('check')"};
+ for(const [mode,prepare]of Object.entries(situations)){
+  const h=setup();h.run(`init('${mode}');state.sneeze.cooldown=0;state.sneeze.random=()=>0;pressed=true;state.grabbing=true;${prepare}`);h.run(`advance(.016,${h.time})`);assert.equal(h.run('state.sneeze.count'),1,mode);assert(h.run('state.sneeze.cooldown>=9'));assert(!h.run('state.grabbing'));
+  if(mode==='tape')assert(h.run('state.peel<.5'));
+  if(mode==='usb'){assert.equal(h.run('state.usbCables.filter(c=>c.connected).length'),2);assert.equal(h.run('state.dockHold'),0);}
+  if(mode==='sheet'){assert.equal(h.run('sheetKeys.size'),0);assert.equal(h.run('state.fitted.filter(Boolean).length'),0);}
+  if(mode==='screw')assert(h.run('state.woodBroken'));
+  if(mode==='needle')assert.equal(h.run('state.threadStage'),'approach');
+  if(mode==='leaf')assert(!h.run('state.leafAttached'));
+  if(mode==='bomb')assert.equal(h.run('state.outcome'),'exploded');
+ }
+});
+test('egg sneeze drops the shell and clears contact',()=>{
+ const h=setup(true);h.run('reset()');h.fire('pointerdown',100,200);h.run('holding=true;shell.x=710;shell.y=365;eggSneeze.cooldown=0;eggSneeze.random=()=>0;draw(.016)');assert.equal(h.run('eggSneeze.count'),1);assert(!h.run('holding'));assert.equal(h.run('eggPointer'),null);assert(h.run('cooldown>0'));
+});
+test('sneeze does not trigger while idle or after the game is finished',()=>{
+ const h=setup();h.run("init('tape');state.sneeze.cooldown=0;state.sneeze.random=()=>0");h.step(2);assert.equal(h.run('state.sneeze.count'),0);h.run("state.finished=true;state.outcome='won';state.peel=.99;pressed=true;state.grabbing=true");h.step(1);assert.equal(h.run('state.sneeze.count'),0);assert.equal(h.run('state.outcome'),'won');
+});
+test('late sneeze can undo the final USB but never the other two connections',()=>{
+ const h=setup();h.run("init('usb');for(const c of state.usbCables){c.connected=true;state.usbPorts[c.port].occupiedBy=c.id;}state.activeCable=2;state.sneeze.cooldown=0;state.sneeze.random=()=>0;win()");assert(!h.run('state.finished'));assert.equal(h.run('state.usbCables.filter(c=>c.connected).length'),2);assert.equal(h.run('state.usbPorts[cable().port].occupiedBy'),null);
+ h.run('state.sneeze.random=()=>1;state.usbCables[2].connected=true;win()');assert.equal(h.run('state.outcome'),'won');
+});
+test('sheet sneeze requires releasing held keyboard fingers before trying again',()=>{
+ const h=setup();h.run("init('sheet');sheetKeys=new Set([0,1,2,3]);syncSheet();state.sneeze.cooldown=0;state.sneeze.random=()=>0;state.sheetHold=1;advance(.016,1000)");
+ for(const key of ['a','s','k','l'])h.run(`sheetKey({key:'${key}',preventDefault(){}},true)`);assert.equal(h.run('state.fitted.filter(Boolean).length'),0);
+ for(const key of ['a','s','k','l']){h.run(`sheetKey({key:'${key}',preventDefault(){}},false)`);h.run(`sheetKey({key:'${key}',preventDefault(){}},true)`);}
+ assert.equal(h.run('state.fitted.filter(Boolean).length'),4);h.run('state.sneeze.random=()=>1');h.step(1.65);assert.equal(h.run('state.outcome'),'won');
+});
+test('sneeze cooldown prevents immediate repeats and reset clears the animation',()=>{
+ const h=setup();h.run("init('tape');state.peel=.9;pressed=true;state.grabbing=true;state.sneeze.cooldown=0;state.sneeze.random=()=>0;advance(.016,1000)");h.run('state.peel=.9;state.penalty=0;pressed=true;state.grabbing=true');h.step(1);assert.equal(h.run('state.sneeze.count'),1);h.run("init('tape')");assert.equal(h.run('state.sneeze.count'),0);assert.equal(h.run('state.sneeze.flash'),0);
+});
+test('sneeze probability is comparable at 30 and 120 frames per second',()=>{
+ const h=setup();const rates=h.run(`(()=>{let seed=47;const rng=()=>((seed=(seed*1664525+1013904223)>>>0)/4294967296);return [30,120].map(hz=>{let hits=0;for(let n=0;n<1000;n++){const s=Sneeze.create();s.random=rng;s.cooldown=0;for(let i=0;i<hz*2;i++)if(Sneeze.tick(s,1/hz,true)){hits++;break}}return hits/1000})})()`);assert(Math.abs(rates[0]-rates[1])<.07);assert(rates.every(n=>n>.6&&n<.83));
 });
 test('all scenes render after interaction and tool changes',()=>{
  const h=setup();for(const mode of ['tape','usb','sheet','screw','needle','leaf','bomb'])h.run(`init('${mode}');scene()`);const e=setup(true);e.run("reset();draw(.016);tool='spoon';draw(.016);tool='tweezers';draw(.016)");
