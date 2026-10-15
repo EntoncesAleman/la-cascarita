@@ -235,9 +235,10 @@ function crumbleSushi(count=true){
 }
 function moveSushi(p,speed){
  const c=sushiPiece();if(!c||c.broken||c.delivered)return;
- if(!state.sushiHeld){if(distance(p,c.position)>touchRadius(8,18))crumbleSushi();return}
+ if(!state.sushiHeld){if(distance(p,c.position)>(inputType==='mouse'?30:touchRadius(8,18)))crumbleSushi();return}
  c.position={x:clamp(p.x,130,785),y:clamp(p.y,170,520)};
- if(speed>c.limit)crumbleSushi();
+ const movementLimit=c.limit*(inputType==='mouse'?3:1);
+ if(speed>movementLimit)crumbleSushi();
 }
 function releaseSushi(e){
  if(!state||state.finished)return;
