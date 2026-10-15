@@ -22,7 +22,7 @@ function setQuote(x){$('quote').textContent=x}
 function sound(){/* Diseño sin audio obligatorio */ }
 function init(m){
  document.body.classList.add('is-playing');mode=m;sheetPointers.clear();sheetKeys.clear();sneezeBlockedKeys.clear();activePointer=null;pressed=false;origin=null;lastPointer=null;tick=0;mx=190;my=310;
- state={attempts:0,elapsed:0,started:performance.now(),finished:false,progress:0,heat:0,fail:0,grabbing:false,penalty:0,tipAngle:rand(-1.8,1.8),peel:0,rotation:0,position:{x:170,y:330},fitted:[false,false,false,false],stripped:0,angle:null,thread:{x:175,y:350},wetUntil:0,threadHold:0,needleWobble:0,motion:0,peelStart:0,peelSpan:200,tapeGrip:0,dockHold:0,socketFace:Math.floor(rand(0,2)),cornerIndex:null,cornerHold:0,lastCorner:null,sheetHold:0,threadStage:'approach',threadInsertion:0,tightness:0,woodDamage:0,woodBroken:false,outcome:null,screwHint:'loose',tongue:{x:450,y:425},leaf:{x:494,y:267},leafLoosen:0,leafAttached:false,bombRemaining:45,bombPending:0,bombChoice:null,bombMessage:'Panel en espera',sneeze:Sneeze.create(),broom:{x:280,y:430},dust:[],dustCollected:0,sweepRounds:0};
+ state={attempts:0,elapsed:0,started:performance.now(),finished:false,progress:0,heat:0,fail:0,grabbing:false,penalty:0,noticeTime:0,tipAngle:rand(-1.8,1.8),peel:0,rotation:0,position:{x:170,y:330},fitted:[false,false,false,false],stripped:0,angle:null,thread:{x:175,y:350},wetUntil:0,threadHold:0,needleWobble:0,motion:0,peelStart:0,peelSpan:200,tapeGrip:0,dockHold:0,socketFace:Math.floor(rand(0,2)),cornerIndex:null,cornerHold:0,lastCorner:null,sheetHold:0,threadStage:'approach',threadInsertion:0,tightness:0,woodDamage:0,woodBroken:false,outcome:null,screwHint:'loose',tongue:{x:450,y:425},leaf:{x:494,y:267},leafLoosen:0,leafAttached:false,bombRemaining:45,bombPending:0,bombChoice:null,bombMessage:'Panel en espera',sneeze:Sneeze.create(),broom:{x:280,y:430},dust:[],dustCollected:0,sweepRounds:0};
  if(m==='sweep')state.dust=floorDust();
  if(m==='usb')createUSB();if(m==='sushi')createSushi();
  $('hero').style.display='none';$('catalog').style.display='none';$('arcade').classList.add('visible');$('game-title').textContent=defs[m].title.toUpperCase();$('game-subtitle').textContent='Dificultad estimada: baja';$('input-help').textContent={sushi:'Sostené para agarrar, llevá despacio y soltá sobre el plato. No aprietes de más.',sweep:'Barré hacia la pala de la derecha. Después, levantala.',leaf:'Deslizá para mover la lengua. Despegá la hojita y bajala despacio.',bomb:'Revisá el panel y elegí un ajuste. Todavía hay tiempo.',tape:'Sostené la pestaña un instante. Tirones cortos a la derecha; soltá y repetí.',usb:'Conectá los tres cables. Probá puertos: los colores pueden engañar.',sheet:'Un dedo en cada esquina: sostené los cuatro a la vez. En compu: A + S + K + L.',screw:'Girá despacio y soltá en el punto justo. Una vuelta de más puede partir la madera.',needle:'Mové el hilo desde cualquier parte. Atravesá el ojo de izquierda a derecha.'}[m];
@@ -50,7 +50,7 @@ function actions(){
  bind('steady',()=>{state.stripped=Math.max(0,state.stripped-.26);setQuote('“Respirás. El tornillo no.”')});
 }
 function failure(msg){
- state.attempts++;state.fail++;state.penalty=.45;state.grabbing=false;state.threadHold=0;state.dockHold=0;state.cornerHold=0;
+ state.attempts++;state.fail++;state.penalty=.45;state.noticeTime=4;state.grabbing=false;state.threadHold=0;state.dockHold=0;state.cornerHold=0;
  setQuote(msg); if(mode==='sweep'){state.dust.push(...floorDust(8));state.dustCollected=Math.max(0,state.dustCollected-8);state.progress=Math.min(.99,state.dustCollected/18);}
  if(mode==='tape'){state.peel=Math.max(0,state.peel-.17);state.progress=state.peel}
  if(mode==='usb'){const c=cable();if(c&&!c.connected)c.position={...c.home};}
@@ -120,7 +120,7 @@ function needleEye(now=performance.now()){return{x:620+Math.sin(now/1570)*25,y:3
 function needleLocal(p,eye){const x=p.x-eye.x,y=p.y-eye.y;return{x:x*Math.cos(eye.tilt)+y*Math.sin(eye.tilt),y:-x*Math.sin(eye.tilt)+y*Math.cos(eye.tilt)}}
 function needleWorld(p,eye){return{x:eye.x+p.x*Math.cos(eye.tilt)-p.y*Math.sin(eye.tilt),y:eye.y+p.x*Math.sin(eye.tilt)+p.y*Math.cos(eye.tilt)}}
 function snagThread(msg){
- const eye=needleEye(),local=needleLocal(state.thread,eye);state.attempts++;state.fail++;state.threadStage='approach';state.threadInsertion=0;state.penalty=.15;
+ const eye=needleEye(),local=needleLocal(state.thread,eye);state.attempts++;state.fail++;state.threadStage='approach';state.threadInsertion=0;state.penalty=.15;state.noticeTime=4;
  state.thread=needleWorld({x:-32,y:clamp(local.y,-24,24)},eye);
  if(lastPointer)grabOffset={x:state.thread.x-lastPointer.x,y:state.thread.y-lastPointer.y};setQuote(msg);
 }
@@ -142,7 +142,7 @@ function moveThread(p,dt,speed,now){
 }
 
 function slipLeaf(){
- const gaps=[366,430,494,558];state.leaf={x:gaps[Math.floor(rand(0,gaps.length))],y:267};state.leafAttached=false;state.leafLoosen=Math.max(0,state.leafLoosen-.35);state.penalty=.25;state.fail++;state.attempts++;setQuote('“Se volvió a meter entre los dientes. Ahí está.”');
+ const gaps=[366,430,494,558];state.leaf={x:gaps[Math.floor(rand(0,gaps.length))],y:267};state.leafAttached=false;state.leafLoosen=Math.max(0,state.leafLoosen-.35);state.penalty=.25;state.noticeTime=4;state.fail++;state.attempts++;setQuote('“Se volvió a meter entre los dientes. Ahí está.”');
 }
 function moveTongue(p,speed){
  state.tongue={x:clamp(p.x,240,665),y:clamp(p.y,235,490)};
@@ -212,7 +212,7 @@ function sushiPiece(){return state.sushiPieces[state.sushiActive]}
 function onSushiPlate(p){return Math.hypot((p.x-680)/103,(p.y-350)/127)<1}
 function crumbleSushi(count=true){
  const c=sushiPiece();if(!c||c.delivered||c.broken)return;
- c.broken=true;state.sushiHeld=false;state.sushiGrip=0;state.sushiPressure=0;state.grabbing=false;state.penalty=.85;state.sushiRecover=.85;
+ c.broken=true;state.sushiHeld=false;state.sushiGrip=0;state.sushiPressure=0;state.grabbing=false;state.penalty=.85;state.noticeTime=4;state.sushiRecover=.85;
  state.sushiDebris=Array.from({length:16},(_,i)=>({x:c.position.x+Math.cos(i*2.4)*(19+i*2),y:c.position.y+Math.sin(i*2.4)*(15+i*1.8),color:i%5===0?'#df956e':'#fff5d9'}));
  if(count){state.fail++;state.attempts++;}state.progress=state.sushiPieces.filter(c=>c.delivered).length/3;setQuote('“Se desarmó. Eran palitos, no una prensa.”');
 }
@@ -334,7 +334,7 @@ function sneezeImpact(){
  if(!state||state.finished)return;
  const ids=mode==='sheet'?Array.from(sheetPointers.keys()):activePointer===null?[]:[activePointer];
  if(mode==='sheet'){for(const key of sheetKeys)sneezeBlockedKeys.add(key);sheetPointers.clear();sheetKeys.clear();state.fitted=[false,false,false,false];state.sheetHold=0;}
- pressed=false;activePointer=null;state.grabbing=false;state.dockHold=0;state.tapeGrip=0;state.motion=0;state.fail++;state.attempts++;state.penalty=.65;
+ pressed=false;activePointer=null;state.grabbing=false;state.dockHold=0;state.tapeGrip=0;state.motion=0;state.fail++;state.attempts++;state.penalty=.65;state.noticeTime=4;
  for(const id of ids)if(canvas.hasPointerCapture?.(id))canvas.releasePointerCapture(id);
  if(mode==='sweep'){state.dust.push(...floorDust(8));state.dustCollected=Math.max(0,state.dustCollected-8);state.progress=Math.min(.99,state.dustCollected/18);}
  if(mode==='sushi'){const c=sushiPiece();if(c.delivered)c.delivered=false;crumbleSushi(false);}
@@ -350,6 +350,7 @@ function sneezeImpact(){
 
 function advance(dt,now){
  if(!state)return;
+ state.noticeTime=Math.max(0,state.noticeTime-dt);
  if(Sneeze.tick(state.sneeze,dt,almostThere())){sneezeImpact();return}
  if(state.finished)return;
  state.elapsed=(now-state.started)/1000;state.penalty=Math.max(0,state.penalty-dt);state.heat=Math.max(0,state.heat-dt*.045);
@@ -403,7 +404,7 @@ function scene(){
  rect(35,74,830,542,28,'#c9bb9766');rect(35,65,830,542,26,shade(65,542,'#fff8e6','#f3e8cd'),'#e0cfaa');
  line(65,67,835,67,'#fffdf3',3);
  if(mode==='tape')drawTape();if(mode==='usb')drawUSB();if(mode==='sheet')drawSheet();if(mode==='screw')drawScrew();if(mode==='needle')drawNeedle();if(mode==='leaf')drawLeaf();if(mode==='bomb')drawBomb();if(mode==='sweep')drawSweep();if(mode==='sushi')drawSushi();
- if(state.penalty>0){rect(280,77,340,36,18,'#f5e0d0');text(450,101,mode==='tape'?'La cinta se soltó. Volvé a la pestaña.':mode==='leaf'?'Se escapó la hojita. Probá más suave.':mode==='sushi'?'Se desarmó. Probá con otra pieza.':'Volvé a intentar, despacio.',14,'#9a4d32')}
+ if(state.noticeTime>0){rect(280,77,340,36,18,'#f5e0d0');text(450,101,mode==='tape'?'La cinta se soltó. Volvé a la pestaña.':mode==='leaf'?'Se escapó la hojita. Probá más suave.':mode==='sushi'?'Se desarmó. Probá con otra pieza.':'Volvé a intentar, despacio.',14,'#9a4d32')}
  Sneeze.draw(ctx,state.sneeze,W,H);
  ctx.restore();
 }
