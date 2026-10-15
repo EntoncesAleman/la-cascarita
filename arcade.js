@@ -2,10 +2,10 @@
 const $=id=>document.getElementById(id),canvas=$('scene'),ctx=canvas.getContext('2d');
 const defs={
  tape:{title:'Encontrá la punta.',label:'UN ROLLO. NADA MÁS.',instructions:'Agarrá la pestaña y hacé tirones cortos hacia la derecha. Podés soltar y volver a agarrar para seguir. Si tirás de golpe o te desviás, se corta.',quote:'“Seguro está por acá.”',meter:'CINTA DESPEGADA'},
- usb:{title:'Del otro lado.',label:'UN CABLE. UN PUERTO.',instructions:'Arrastrá el conector hasta el puerto. Giralo con el botón cuando sea necesario. La punta tiembla un poco: mantenela centrada en el puerto un segundo. Si llegás demasiado rápido, rebota.',quote:'“Probá del otro lado.”',meter:'ALINEACIÓN'},
- sheet:{title:'La sábana ajustable.',label:'UNA SÁBANA. CUATRO ESQUINAS.',instructions:'Mantené presionada cada esquina para estirar la sábana. Si forzás el orden, una esquina puesta se suelta. El truco es alternar diagonales.',quote:'“La primera ya estaba puesta.”',meter:'ESQUINAS AJUSTADAS'},
+ usb:{title:'Del otro lado.',label:'TRES CABLES. TRES PUERTOS.',instructions:'Conectá los tres cables. Elegí uno, giralo si hace falta y probá los puertos. Sus colores no garantizan que sean compatibles. Sostené cada conector alineado para enchufarlo.',quote:'“Probá del otro lado.”',meter:'CABLES CONECTADOS'},
+ sheet:{title:'La sábana ajustable.',label:'UNA SÁBANA. CUATRO ESQUINAS.',instructions:'Poné un dedo en cada esquina y mantené los cuatro a la vez durante un momento. Si soltás uno, se escapa esa esquina. En computadora, mantené A, S, K y L simultáneamente.',quote:'“La primera ya estaba puesta.”',meter:'CUATRO ESQUINAS A LA VEZ'},
  screw:{title:'Una vueltita más.',label:'UN TORNILLO. UNA VUELTA MÁS.',instructions:'Presioná y dibujá círculos alrededor de la cabeza del tornillo, despacio y en sentido horario. Si girás demasiado rápido, se barre. Podés aflojar presión soltando.',quote:'“Le falta apenas una vueltita.”',meter:'ROSCA AJUSTADA'},
- needle:{title:'Enhebrá eso.',label:'UN HILO. UNA AGUJA.',instructions:'Arrastrá la punta del hilo hasta el pequeño ojo de la aguja a la derecha. Acercate despacio. Podés chupar el hilo para endurecer la punta durante unos segundos.',quote:'“Con buena luz sería fácil.”',meter:'PUNTA ENHEBRADA'}
+ needle:{title:'Enhebrá eso.',label:'UN HILO. UNA AGUJA.',instructions:'Arrastrá desde cualquier parte para mover el hilo. La aguja se mueve: alineá la punta con su ojo y atravesalo de izquierda a derecha. No alcanza con apoyarla. Humedecer la punta ayuda.',quote:'“Con buena luz sería fácil.”',meter:'PUNTA ENHEBRADA'}
 };
 let mode=null,state=null,pressed=false,origin=null,lastPointer=null,tick=0,lastFrame=0;
 let mx=190,my=310;const W=900,H=660;
@@ -16,9 +16,10 @@ function rand(a,b){return a+Math.random()*(b-a)}
 function setQuote(x){$('quote').textContent=x}
 function sound(){/* Diseño sin audio obligatorio */ }
 function init(m){
- document.body.classList.add('is-playing');mode=m;activePointer=null;pressed=false;origin=null;lastPointer=null;tick=0;mx=190;my=310;
- state={attempts:0,elapsed:0,started:performance.now(),finished:false,progress:0,heat:0,fail:0,grabbing:false,penalty:0,tipAngle:rand(-1.8,1.8),peel:0,rotation:0,position:{x:170,y:330},fitted:[false,false,false,false],stripped:0,angle:null,thread:{x:175,y:350},wetUntil:0,threadHold:0,needleWobble:0,motion:0,peelStart:0,peelSpan:200,tapeGrip:0,dockHold:0,socketFace:Math.floor(rand(0,2)),cornerIndex:null,cornerHold:0,lastCorner:null};
- $('hero').style.display='none';$('catalog').style.display='none';$('arcade').classList.add('visible');$('game-title').textContent=defs[m].title.toUpperCase();$('game-subtitle').textContent='Dificultad estimada: baja';$('input-help').textContent={tape:'Sostené la pestaña un instante. Tirones cortos a la derecha; soltá y repetí.',usb:'Arrastrá el conector, giralo si hace falta y sostenelo alineado.',sheet:'Sostené cada esquina para estirarla. Alterná diagonales y aflojá la tensión.',screw:'Sostené y girá alrededor del tornillo, despacio y en sentido horario.',needle:'Arrastrá la punta y sostenela dentro del ojo. Humedecerla ayuda.'}[m];
+ document.body.classList.add('is-playing');mode=m;sheetPointers.clear();sheetKeys.clear();activePointer=null;pressed=false;origin=null;lastPointer=null;tick=0;mx=190;my=310;
+ state={attempts:0,elapsed:0,started:performance.now(),finished:false,progress:0,heat:0,fail:0,grabbing:false,penalty:0,tipAngle:rand(-1.8,1.8),peel:0,rotation:0,position:{x:170,y:330},fitted:[false,false,false,false],stripped:0,angle:null,thread:{x:175,y:350},wetUntil:0,threadHold:0,needleWobble:0,motion:0,peelStart:0,peelSpan:200,tapeGrip:0,dockHold:0,socketFace:Math.floor(rand(0,2)),cornerIndex:null,cornerHold:0,lastCorner:null,sheetHold:0,threadStage:'approach',threadInsertion:0};
+ if(m==='usb')createUSB();
+ $('hero').style.display='none';$('catalog').style.display='none';$('arcade').classList.add('visible');$('game-title').textContent=defs[m].title.toUpperCase();$('game-subtitle').textContent='Dificultad estimada: baja';$('input-help').textContent={tape:'Sostené la pestaña un instante. Tirones cortos a la derecha; soltá y repetí.',usb:'Conectá los tres cables. Probá puertos: los colores pueden engañar.',sheet:'Un dedo en cada esquina: sostené los cuatro a la vez. En compu: A + S + K + L.',screw:'Sostené y girá alrededor del tornillo, despacio y en sentido horario.',needle:'Mové el hilo desde cualquier parte. Atravesá el ojo de izquierda a derecha.'}[m];
  $('task-image').src='assets/'+m+'-960.webp';$('task-image').alt=defs[m].title;$('task-caption').textContent=defs[m].title;
  $('canvas-label').textContent=defs[m].label;$('instructions').textContent=defs[m].instructions;$('meter-label').textContent=defs[m].meter;
  $('overlay').classList.remove('on');setQuote(defs[m].quote);actions();location.hash=m;
@@ -29,20 +30,19 @@ function actions(){
  if(mode==='usb')html='<button id="rotate">↻ Girar conector</button>';
  if(mode==='needle')html='<button id="lick">👅 Chupar el hilo</button>';
  if(mode==='tape')html='<button id="find">🔎 Mirar de cerca</button>';
- if(mode==='sheet')html='<button id="loosen">Aflojar tensión</button>';
+ if(mode==='sheet')html='<span class="input-help">4 dedos · En compu: A + S + K + L</span>';
  if(mode==='screw')html='<button id="steady">Respirar un segundo</button>';
  $('actions').innerHTML=html;
  const bind=(id,fn)=>{const n=$(id);if(n)n.onclick=fn};
- bind('rotate',()=>{state.rotation=(state.rotation+1)%2;state.attempts++;setQuote(state.rotation?'“Ahora seguro entra.”':'“¿No estaba bien antes?”')});
+ bind('rotate',()=>{let c=cable();if(!c||c.connected){const next=state.usbCables.find(v=>!v.connected);if(!next)return;state.activeCable=next.id;c=next;}c.face=(c.face+1)%2;state.dockHold=0;state.attempts++;setQuote('“Cable '+c.label+' girado. Probá ahora.”');});
  bind('lick',()=>{state.wetUntil=performance.now()+6500;state.threadHold=0;setQuote('“Sí. Acabás de chupar el hilo. Está temporalmente rígido.”')});
  bind('find',()=>{state.tipAngle=0;state.attempts++;setQuote('“Ahí estaba. ¿Y ahora cómo lo despegás?”')});
- bind('loosen',()=>{state.heat=Math.max(0,state.heat-.35);setQuote('“Se soltó un poco la tensión. Demasiado fácil no va a ser.”')});
  bind('steady',()=>{state.stripped=Math.max(0,state.stripped-.26);setQuote('“Respirás. El tornillo no.”')});
 }
 function failure(msg){
  state.attempts++;state.fail++;state.penalty=.45;state.grabbing=false;state.threadHold=0;state.dockHold=0;state.cornerHold=0;
  setQuote(msg); if(mode==='tape'){state.peel=Math.max(0,state.peel-.17);state.progress=state.peel}
- if(mode==='usb')state.position={x:170,y:330};
+ if(mode==='usb'){const c=cable();if(c&&!c.connected)c.position={...c.home};}
  if(mode==='needle'){state.thread={x:175,y:350};state.heat=Math.min(1,state.heat+.12)}
  if(mode==='screw')state.stripped=clamp(state.stripped+.22,0,1);
  if(mode==='sheet')state.heat=clamp(state.heat+.18,0,1);
@@ -56,18 +56,90 @@ function fmt(s){return Math.floor(s/60)+':'+String(Math.floor(s%60)).padStart(2,
 function point(e){const r=canvas.getBoundingClientRect();return{x:(e.clientX-r.left)*W/r.width,y:(e.clientY-r.top)*H/r.height}}
 function distance(a,b){return Math.hypot(a.x-b.x,a.y-b.y)}
 function touchRadius(px,base){return inputType==='touch'?Math.max(base,px*W/canvas.getBoundingClientRect().width):base}
-function socket(){return{x:681,y:330+Math.sin(performance.now()/1100)*14}}
+const usbColors=[{name:'coral',base:'#da7b6d',light:'#f3b6a1',dark:'#984a49'},{name:'azul',base:'#69a9c2',light:'#acd7df',dark:'#3f718f'},{name:'amarillo',base:'#dfb14e',light:'#f7d991',dark:'#a47e32'}];
+let sheetPointers=new Map(),sheetKeys=new Set();
+function createUSB(){
+ const choices=[[1,2,0],[2,0,1],[0,2,1],[1,0,2],[2,1,0]],wiring=choices[Math.floor(rand(0,choices.length))];
+ state.usbPorts=usbColors.map((color,i)=>({id:i,color,face:Math.floor(rand(0,2)),occupiedBy:null,y:210+i*125}));
+ state.usbCables=usbColors.map((color,i)=>({id:i,label:'ABC'[i],color,port:wiring[i],face:Math.floor(rand(0,2)),connected:false,home:{x:185,y:210+i*125},position:{x:185,y:210+i*125}}));
+ state.activeCable=0;
+}
+function cable(){return state.usbCables[state.activeCable]}
+function socket(index=0,now=performance.now()){const port=state.usbPorts[index];return{x:655,y:port.y+Math.sin(now/1100+index)*8}}
+function dockCable(){
+ const c=cable(),port=state.usbPorts[c.port];c.connected=true;c.position={x:655,y:port.y};port.occupiedBy=c.id;
+ state.grabbing=false;state.dockHold=0;state.progress=state.usbCables.filter(c=>c.connected).length/3;
+ setQuote('“Cable '+c.label+' conectado. '+(state.usbCables.filter(c=>!c.connected).length?'Vamos con el siguiente.':'Listo.')+'”');
+ if(state.usbCables.every(c=>c.connected))win();
+}
+function syncSheet(){
+ if(!state||state.finished)return;
+ const old=state.fitted.filter(Boolean).length;
+ state.fitted=corners.map((_,i)=>sheetKeys.has(i)||Array.from(sheetPointers.values()).some(p=>p.corner===i&&p.inside));
+ const n=state.fitted.filter(Boolean).length;state.grabbing=n>0;
+ if(n<4)state.sheetHold=0;
+ if(!old&&n)state.attempts++;
+ if(n<old)setQuote('“No sueltes: las cuatro esquinas al mismo tiempo.”');
+}
+function sheetDown(e){
+ if(!state||state.finished)return;e.preventDefault();inputType=e.pointerType||'mouse';
+ if(inputType==='mouse'){setQuote('“En compu: mantené A, S, K y L a la vez.”');return}
+ if(sheetPointers.has(e.pointerId))return;
+ const p=point(e),i=corners.findIndex(v=>distance(v,p)<touchRadius(23,65));
+ if(i<0||Array.from(sheetPointers.values()).some(v=>v.corner===i))return;
+ canvas.setPointerCapture(e.pointerId);sheetPointers.set(e.pointerId,{corner:i,inside:true});syncSheet();
+ setQuote('“'+state.fitted.filter(Boolean).length+' de cuatro dedos. No los levantes.”');
+}
+function sheetMove(e){
+ const held=sheetPointers.get(e.pointerId);if(!held||!state||state.finished)return;e.preventDefault();
+ held.inside=distance(point(e),corners[held.corner])<touchRadius(30,80);syncSheet();
+}
+function sheetUp(e){
+ if(e&&e.pointerId!==undefined)sheetPointers.delete(e.pointerId);else{sheetPointers.clear();sheetKeys.clear()}
+ syncSheet();
+}
+function sheetKey(e,down){
+ if(mode!=='sheet'||!state||state.finished||e.ctrlKey||e.metaKey||e.altKey)return;
+ const i=['a','s','k','l'].indexOf(String(e.key||'').toLowerCase());if(i<0)return;e.preventDefault();
+ if(down)sheetKeys.add(i);else sheetKeys.delete(i);syncSheet();
+}
+function needleEye(now=performance.now()){return{x:620+Math.sin(now/1570)*25,y:310+Math.sin(now/1070)*29+Math.sin(now/2470)*8,tilt:Math.sin(now/1920)*.12}}
+function needleLocal(p,eye){const x=p.x-eye.x,y=p.y-eye.y;return{x:x*Math.cos(eye.tilt)+y*Math.sin(eye.tilt),y:-x*Math.sin(eye.tilt)+y*Math.cos(eye.tilt)}}
+function needleWorld(p,eye){return{x:eye.x+p.x*Math.cos(eye.tilt)-p.y*Math.sin(eye.tilt),y:eye.y+p.x*Math.sin(eye.tilt)+p.y*Math.cos(eye.tilt)}}
+function snagThread(msg){
+ const eye=needleEye(),local=needleLocal(state.thread,eye);state.attempts++;state.fail++;state.threadStage='approach';state.threadInsertion=0;state.penalty=.15;
+ state.thread=needleWorld({x:-32,y:clamp(local.y,-24,24)},eye);
+ if(lastPointer)grabOffset={x:state.thread.x-lastPointer.x,y:state.thread.y-lastPointer.y};setQuote(msg);
+}
+function moveThread(p,dt,speed,now){
+ const previous=state.thread,eye=needleEye(now),oldEye=needleEye(now-dt*1000),old=needleLocal(previous,oldEye),next=needleLocal(p,eye);
+ const wet=now<state.wetUntil,tol=touchRadius(wet?7:4.5,wet?14:7);
+ state.thread={x:clamp(p.x,45,825),y:clamp(p.y,105,570)};
+ if(state.threadStage==='approach'&&old.x<0&&next.x>=0&&Math.abs(next.y)<70){
+  const at=clamp(-old.x/(next.x-old.x||1),0,1),crossY=old.y+(next.y-old.y)*at;
+  if(Math.abs(crossY)>tol||speed>(wet?230:155)){snagThread('“Pegó en el borde. Ajustá la punta y volvé a pasar.”');return}
+  state.threadStage='through';setQuote('“Entró. Ahora pasá el hilo hacia el otro lado.”');
+ }
+ if(state.threadStage==='through'){
+  if(next.x< -6){state.threadStage='approach';state.threadInsertion=0;return}
+  if(Math.abs(next.y)>tol||speed>(wet?230:155)){snagThread('“Se salió del ojo. La punta sigue en tu mano.”');return}
+  state.threadInsertion=clamp(next.x/42,0,1);state.progress=.4+state.threadInsertion*.6;
+  if(next.x>=42&&p.x>previous.x)win();
+ }else state.progress=clamp(1-distance(state.thread,eye)/500,0,1)*.4;
+}
+
 function down(e){
+ if(mode==='sheet'){sheetDown(e);return}
  if(!mode||state.finished||state.penalty>0||activePointer!==null)return;
  e.preventDefault();inputType=e.pointerType||'mouse';activePointer=e.pointerId;canvas.setPointerCapture(e.pointerId);
  const p=point(e);pressed=true;origin=p;lastPointer=p;tick=performance.now();state.motion=0;mx=p.x;my=p.y;grabOffset={x:0,y:0};
  if(mode==='tape'){const tip=tapeGeometry().tip;if(distance(p,tip)<touchRadius(22,37)){state.grabbing=true;state.tapeGrip=0;state.peelStart=state.peel;state.peelSpan=Math.max(80,Math.min(200,W-p.x-28));mx=tip.x;my=tip.y;grabOffset={x:tip.x-p.x,y:tip.y-p.y};setQuote('“La agarraste. Tirones cortos, sin apurarte.”')}else failure('“Eso no era la punta.”')}
- if(mode==='usb'){if(distance(p,state.position)<touchRadius(28,105)){state.grabbing=true;grabOffset={x:state.position.x-p.x,y:state.position.y-p.y}}else failure('“Eso no es el enchufe.”')}
- if(mode==='sheet'){const i=corners.findIndex(v=>distance(v,p)<touchRadius(24,65));if(i>=0&&!state.fitted[i]){state.grabbing=true;state.cornerIndex=i;state.cornerHold=0;setQuote('“Sostené para estirar. La tela necesita un momento.”')}else if(i>=0)setQuote('“Esa esquina ya estaba puesta.”');else failure('“La sábana no se ajusta desde el medio.”')}
+ if(mode==='usb'){const options=state.usbCables.filter(c=>!c.connected).sort((a,b)=>distance(p,a.position)-distance(p,b.position)),c=options[0];if(c&&distance(p,c.position)<touchRadius(25,82)){state.activeCable=c.id;state.grabbing=true;state.dockHold=0;grabOffset={x:c.position.x-p.x,y:c.position.y-p.y};setQuote('“Cable '+c.label+'. A ver dónde entra.”')}else setQuote('“Elegí uno de los cables que todavía están sueltos.”')}
  if(mode==='screw'){const r=distance(p,{x:450,y:330});if(r<touchRadius(38,115)){state.grabbing=true;state.angle=r>=26?Math.atan2(p.y-330,p.x-450):null}else failure('“El destornillador patinó en la mesa.”')}
- if(mode==='needle'){if(distance(p,state.thread)<touchRadius(28,82)){state.grabbing=true;grabOffset={x:state.thread.x-p.x,y:state.thread.y-p.y}}else failure('“Primero encontrá la punta del hilo.”')}
+ if(mode==='needle'){state.grabbing=true;grabOffset={x:state.thread.x-p.x,y:state.thread.y-p.y};setQuote('“El hilo ya está en tu mano. Ahora, el ojo de la aguja.”')}
 }
 function move(e){
+ if(mode==='sheet'){sheetMove(e);return}
  if(e.pointerId!==activePointer||!mode||!pressed||state.finished)return;e.preventDefault();
  const raw=point(e),prev=lastPointer||raw,d=distance(raw,prev),now=performance.now();
  const dt=Math.max(.008,Math.min(.12,(now-tick)/1000||.016));tick=now;lastPointer=raw;
@@ -85,11 +157,11 @@ function move(e){
  if(state.heat>=1){failure('“La cinta se pegó sobre sí misma. Volvé a la pestaña.”');state.heat=.2}if(state.peel>=1)win();
  }
  if(mode==='usb'){
- state.position={x:clamp(p.x,70,810),y:clamp(p.y,130,540)};
- const target=socket(),dist=distance(state.position,target);state.progress=clamp(1-dist/540,0,.78);
- if(dist<48){if(state.rotation!==state.socketFace)failure('“Es la otra cara. Giralo y probá de nuevo.”');else if(speed>190||Math.abs(p.y-target.y)>touchRadius(14,19))failure('“Casi. Entrá recto y más despacio.”')}
+ const c=cable();c.position={x:clamp(p.x,80,790),y:clamp(p.y,145,540)};
+ const near=state.usbPorts.map(port=>({port,d:distance(c.position,socket(port.id))})).sort((a,b)=>a.d-b.d)[0];
+ const count=state.usbCables.filter(v=>v.connected).length;state.progress=(count+clamp(1-near.d/450,0,.7))/3;
+ if(near.d<45){if(near.port.occupiedBy!==null)failure('“Ese puerto ya está ocupado.”');else if(c.port!==near.port.id)failure('“Mismo conector, otra compatibilidad. El color no ayudó.”');else if(c.face!==near.port.face)failure('“Es el puerto, pero la otra cara. Girá el cable.”');else if(speed>190)failure('“Más despacio. Se salió del puerto.”')}
  }
- if(mode==='sheet'&&state.cornerIndex!==null){if(distance(raw,corners[state.cornerIndex])>touchRadius(34,85)){state.grabbing=false;state.cornerHold=0;setQuote('“Se soltó la tela. Sostené sobre la esquina.”')}}
  if(mode==='screw'){
  const r=distance(p,{x:450,y:330}),angle=Math.atan2(p.y-330,p.x-450);
  if(r<26){state.angle=null;return}
@@ -101,39 +173,32 @@ function move(e){
  else if(dr<-.025){state.progress=Math.max(0,state.progress+dr/25);state.stripped=clamp(state.stripped+Math.abs(dr)*.12,0,1)}
  if(state.stripped>=1){failure('“La cabeza está barrida. Aflojá la presión.”');state.stripped=.58}if(state.progress>=1)win();
  }
- if(mode==='needle'){
- state.thread={x:clamp(p.x,45,790),y:clamp(p.y,105,575)};
- const wet=performance.now()<state.wetUntil,eye={x:660,y:313+Math.sin(performance.now()/930)*5};
- state.progress=clamp(1-distance(state.thread,eye)/480,0,.86);
- if(speed>(wet?260:170)){failure('“Se deshilachó de nuevo. Acercate más despacio.”');return}
- }
+ if(mode==='needle')moveThread(p,dt,speed,now);
 }
-function up(e){if(e&&e.pointerId!==undefined&&e.pointerId!==activePointer)return;pressed=false;activePointer=null;if(state){state.grabbing=false;state.cornerHold=0;state.cornerIndex=null;state.threadHold=0;state.dockHold=0;state.tapeGrip=0}}
+function up(e){if(mode==='sheet'){sheetUp(e);return}if(e&&e.pointerId!==undefined&&e.pointerId!==activePointer)return;pressed=false;activePointer=null;if(state){state.grabbing=false;state.cornerHold=0;state.cornerIndex=null;state.threadHold=0;state.dockHold=0;state.tapeGrip=0}}
 function advance(dt,now){
  if(!state||state.finished)return;
  state.elapsed=(now-state.started)/1000;state.penalty=Math.max(0,state.penalty-dt);state.heat=Math.max(0,state.heat-dt*.045);
  if(now-tick>100)state.motion=0;
+ if(mode==='sheet'){
+ syncSheet();const n=state.fitted.filter(Boolean).length;
+ if(n===4){state.sheetHold+=dt;if(state.sheetHold>=1.6)win()}else state.sheetHold=0;
+ if(!state.finished)state.progress=n/4*.7+Math.min(1,state.sheetHold/1.6)*.3;return;
+ }
  if(!pressed||!state.grabbing||state.penalty>0)return;
  if(mode==='tape')state.tapeGrip=Math.min(.38,state.tapeGrip+dt);
- if(mode==='sheet'&&state.cornerIndex!==null){state.cornerHold+=dt;if(state.cornerHold>=.72){corner(state.cornerIndex);state.cornerHold=0;state.cornerIndex=null;state.grabbing=false}}
+
  if(mode==='usb'){
- const target=socket(),near=distance(state.position,target)<42,aligned=Math.abs(state.position.y-target.y)<touchRadius(4,8);
- if(near&&aligned&&state.rotation===state.socketFace&&state.motion<95){state.dockHold+=dt;state.progress=.78+Math.min(1,state.dockHold/1.1)*.22;setQuote('“Ahí. Sostenelo alineado un segundo.”');if(state.dockHold>=1.1)win()}
+ const c=cable();if(!c||c.connected)return;
+ const port=state.usbPorts[c.port],target=socket(c.port),near=distance(c.position,target)<42,aligned=Math.abs(c.position.y-target.y)<touchRadius(4,8);
+ if(near&&aligned&&c.face===port.face&&port.occupiedBy===null&&state.motion<95){state.dockHold+=dt;state.progress=(state.usbCables.filter(v=>v.connected).length+.7+Math.min(1,state.dockHold/1.1)*.3)/3;if(state.dockHold>=1.1)dockCable()}
  else state.dockHold=Math.max(0,state.dockHold-dt*2);
  }
- if(mode==='needle'){
- const wet=now<state.wetUntil,eye={x:660,y:313+Math.sin(now/930)*5},tol=touchRadius(wet?8:5,wet?17:7),duration=wet?.85:1.25;
- if(distance(state.thread,eye)<tol&&state.motion<(wet?100:65)){state.threadHold+=dt;state.progress=.86+Math.min(1,state.threadHold/duration)*.14;if(state.threadHold>=duration)win()}
- else state.threadHold=Math.max(0,state.threadHold-dt*1.8);
+ if(mode==='needle'&&state.threadStage==='through'){
+ const eye=needleEye(now),local=needleLocal(state.thread,eye),wet=now<state.wetUntil,tol=touchRadius(wet?7:4.5,wet?14:7);
+ if(Math.abs(local.y)>tol)snagThread('“Se movió la aguja. Volvé a alinear la punta.”');
+ else if(local.x< -6){state.threadStage='approach';state.threadInsertion=0;}
  }
-}
-function corner(i){
- state.attempts++;const f=state.fitted;if(f[i])return;
- const before=f.filter(Boolean).length,previous=state.lastCorner;f[i]=true;
- if(before===1&&previous!==null&&(previous+2)%4!==i&&state.heat>.12){f[previous]=false;setQuote('“Estiraste de un lado. Se soltó del otro.”')}
- else if(before>=2&&state.heat>.43){const old=f.findIndex((v,j)=>j!==i&&v);if(old>=0)f[old]=false;setQuote('“Demasiada tensión. Se soltó otra esquina.”')}
- else setQuote('“'+f.filter(Boolean).length+' esquinas puestas. Sin apurarse.”');
- state.lastCorner=i;state.heat=clamp(state.heat+.26,0,1);state.progress=f.filter(Boolean).length/4;if(state.progress===1)win();
 }
 
 function shape(draw){ctx.beginPath();draw();ctx.fill();ctx.stroke()}
@@ -204,29 +269,30 @@ function drawTape(){
 }
 
 function drawUSB(){
- // Laptop side: the port's contact center remains exactly (681,330).
- oval(681,484,140,18,'#b8aa8166');rect(568,215,247,248,20,'#8c987c55');rect(566,206,247,248,17,shade(206,248,'#d9e5da','#9cb6a6'),'#6c8c7e');rect(566,206,247,28,12,'#eaf2df');line(576,243,803,243,'#8d9f8d',2);
- rect(620,281,133,98,9,'#778b79','#526954');rect(637,295,102,69,5,'#253c33','#e5e8d9');
- const contactY=state.socketFace?326:304;rect(648,contactY,80,26,3,'#99ab99');[660,677,694,711].forEach(x=>rect(x,contactY,7,13,1,'#e6c874'));
- line(773,312,791,312,'#66846e',3);line(773,325,791,325,'#66846e',3);line(773,338,791,338,'#66846e',3);
- guide(738,328,714,170,'PUERTO USB');
- const target=socket();line(630,330,636,330,'#bb744e',3);
- if(state.dockHold>0){ctx.beginPath();ctx.arc(681,330,56,-Math.PI/2,-Math.PI/2+Math.min(1,state.dockHold/1.1)*Math.PI*2);ctx.strokeStyle='#52734f';ctx.lineWidth=4;ctx.stroke();}
- const p={x:state.position.x,y:state.position.y-(target.y-330)};
- path(c=>{c.moveTo(-20,475);c.bezierCurveTo(80,475,p.x-180,p.y+25,p.x-94,p.y)},null,'#425b4b',18);
- path(c=>{c.moveTo(-20,471);c.bezierCurveTo(80,471,p.x-180,p.y+20,p.x-94,p.y-4)},null,'#6f8770',4);
- ctx.save();ctx.translate(p.x-30,p.y);ctx.scale(.7,1);
- // Flipping a USB changes the contact face, never the direction of its plug.
- rect(-91,-38,156,76,12,shade(-38,76,'#719c76','#426c52'),'#31563e');rect(-83,-30,140,12,5,'#638067');
- [0,8,16].forEach(n=>line(-75-n,-19,-75-n,19,'#738b70',2));
- rect(49,-27,80,54,4,'#dce1d6','#6a7d6c');rect(62,-19,57,38,2,'#b4c1af');
- const yy=state.rotation?7:-16;rect(73,yy,15,9,1,'#4b6150');rect(100,yy,15,9,1,'#4b6150');
- // Small USB trident embossed in the grip.
- line(-43,0,13,0,'#a3b99b',2);arrow(0,0,13,0,'#a3b99b');line(-19,0,-30,-13,'#a3b99b',2);circle(-31,-14,3,'#a3b99b');line(-9,0,-20,13,'#a3b99b',2);rect(-23,11,6,6,1,'#a3b99b');ctx.restore();
- if(!state.grabbing)guide(p.x,p.y+42,p.x,465,'ARRASTRÁ EL CONECTOR');
- if(p.x<485)arrow(380,330,536,330,'#a3b198');
- pill(450,558,'ALINEÁ Y SOSTENÉ UN SEGUNDO');text(450,590,'El botón «Girar conector» cambia la cara del USB.',15);
+ oval(701,541,137,17,'#b8aa8166');rect(612,145,204,391,20,'#92a59566');rect(607,137,204,391,20,shade(137,391,'#e0ebdc','#a8beb0'),'#819e8b');rect(607,137,204,24,12,'#edf4df');
+ for(const port of state.usbPorts){
+  const color=port.color,y=port.y;rect(627,y-40,164,80,10,shade(y-40,80,color.light,color.base),color.dark);
+  rect(643,y-25,108,50,5,'#293e34','#6b8070');const cy=y+(port.face?3:-17);rect(652,cy,89,17,2,'#9daf99');
+  [661,681,701,721].forEach(x=>rect(x,cy,8,11,1,'#eed697'));text(774,y+6,String(port.id+1),20,'#fff9e8');
+  if(port.occupiedBy!==null){circle(623,y-33,13,'#65966b','#e9f1d5');text(623,y-28,'✓',15,'#fff9e8');}
+ }
+ const ordered=state.usbCables.filter(c=>c.id!==state.activeCable).concat(state.usbCables.filter(c=>c.id===state.activeCable));
+ for(const c of ordered){
+  const p={x:c.position.x,y:c.position.y-(c.connected?0:Math.sin(performance.now()/1100+c.port)*8)},col=c.color;
+  path(k=>{k.moveTo(-5,c.home.y+30);k.bezierCurveTo(65,c.home.y+50,p.x-145,p.y+20,p.x-104,p.y)},null,col.dark,15);
+  path(k=>{k.moveTo(-5,c.home.y+26);k.bezierCurveTo(65,c.home.y+46,p.x-145,p.y+16,p.x-104,p.y-4)},null,col.light,3);
+  ctx.save();ctx.translate(p.x,p.y);
+  rect(-105,-29,95,58,12,shade(-29,58,col.light,col.base),col.dark);line(-91,-20,-25,-20,col.light,3);
+  rect(-10,-21,60,42,3,shade(-21,42,'#eef0e4','#aabdb0'),'#6e8778');rect(2,c.face?6:-14,15,8,1,'#526c5b');rect(26,c.face?6:-14,15,8,1,'#526c5b');
+  text(-58,7,c.label,22,'#fff9e9');
+  if(!c.connected&&c.id===state.activeCable)rect(-111,-35,107,70,15,'transparent','#ad7852');ctx.restore();
+ }
+ const active=cable();
+ if(active&&!active.connected&&state.dockHold>0){const port=state.usbPorts[active.port];ctx.beginPath();ctx.arc(697,port.y,56,-Math.PI/2,-Math.PI/2+Math.min(1,state.dockHold/1.1)*Math.PI*2);ctx.strokeStyle='#648c58';ctx.lineWidth=4;ctx.stroke();}
+ pill(450,558,state.usbCables.filter(c=>c.connected).length+' / 3 CABLES CONECTADOS');text(450,590,'Elegí un cable. Giralo si hace falta y probá un puerto.',16);
+ text(187,151,'CABLES A · B · C',13);text(709,111,'PUERTOS 1 · 2 · 3',13);
 }
+
 function drawSheet(){
  oval(449,528,301,22,'#b8aa8166');rect(175,208,555,303,28,'#a08059','#786c4e');rect(186,483,20,48,5,'#8b744e');rect(694,483,20,48,5,'#8b744e');
  rect(181,177,535,312,30,'#e1dbbf','#b2ad91');rect(193,187,515,300,29,shade(187,300,'#fff7df','#e6d8b7'),'#c9b68c');rect(184,150,534,47,18,shade(150,47,'#c59057','#9b643b'),'#895d3e');line(203,158,698,158,'#e9b77c',3);
@@ -240,10 +306,13 @@ function drawSheet(){
  path(c=>{c.moveTo(315,249);c.quadraticCurveTo(363,241,416,251);c.moveTo(467,249);c.quadraticCurveTo(515,241,572,251)},null,'#fffbe9',3);
  // Short geometric fabric folds flow toward each fitted or loose corner.
  points.forEach((v,i)=>{let sx=i===0||i===3?1:-1,sy=i<2?1:-1;for(let j=0;j<3;j++)path(c=>{c.moveTo(v.x+sx*(10+j*10),v.y+sy*9);c.quadraticCurveTo(v.x+sx*(43+j*6),v.y+sy*35,v.x+sx*(65+j*12),v.y+sy*(65-j*9))},null,j%2?'#c3cfae':'#8ca47d',2)});
- cs.forEach((v,i)=>{if(f[i]){path(c=>{c.moveTo(v.x-22,v.y);c.lineTo(v.x-7,v.y+13);c.lineTo(v.x+20,v.y-14)},null,'#52734f',4);circle(v.x,v.y,29,'#52734f');text(v.x,v.y+6,'✓',22,'#fffbed');}else{dotted(v.x,v.y,29,'#b27451');circle(v.x,v.y,18,'#faf7eb','#b27451');text(v.x,v.y+6,String(i+1),17,'#9b5a3d');line(points[i].x,points[i].y,v.x,v.y,'#b27451',2);}});
- if(state.cornerIndex!==null&&state.grabbing){const v=cs[state.cornerIndex];ctx.beginPath();ctx.arc(v.x,v.y,38,-Math.PI/2,-Math.PI/2+Math.min(1,state.cornerHold/.72)*Math.PI*2);ctx.strokeStyle='#b96748';ctx.lineWidth=4;ctx.stroke();}
- pill(450,343,f.filter(Boolean).length+' / 4 ESQUINAS');
- rect(346,365,208,5,3,'#dbe2cc');rect(346,356,208*state.heat,5,3,state.heat>.43?'#b96748':'#607e61');text(450,392,'TENSIÓN DE LA TELA',11);text(450,566,'Sostené cada esquina para estirar la tela.',16);text(450,592,'Las esquinas opuestas reparten mejor la tensión.',14,'#798773');
+ cs.forEach((v,i)=>{if(f[i]){path(c=>{c.moveTo(v.x-22,v.y);c.lineTo(v.x-7,v.y+13);c.lineTo(v.x+20,v.y-14)},null,'#52734f',4);circle(v.x,v.y,29,'#52734f');text(v.x,v.y+6,'✓',22,'#fffbed');}else{dotted(v.x,v.y,29,'#b27451');circle(v.x,v.y,18,'#faf7eb','#b27451');text(v.x,v.y+6,['A','S','K','L'][i],17,'#9b5a3d');line(points[i].x,points[i].y,v.x,v.y,'#b27451',2);}});
+ const n=f.filter(Boolean).length;
+ for(let i=0;i<4;i++)if(f[i]){const v=cs[i];ctx.beginPath();ctx.arc(v.x,v.y,37,-Math.PI/2,-Math.PI/2+Math.min(1,state.sheetHold/1.6)*Math.PI*2);ctx.strokeStyle='#e3b85e';ctx.lineWidth=5;ctx.stroke();}
+ pill(450,343,n+' / 4 DEDOS SUJETANDO');
+ rect(346,365,208,6,3,'#dbe2cc');rect(346,365,208*Math.min(1,state.sheetHold/1.6),6,3,'#678e5e');text(450,392,n===4?'NO SUELTES NINGUNO':'LAS CUATRO ESQUINAS A LA VEZ',11);
+ text(450,566,'Un dedo en cada esquina. Sostené los cuatro a la vez.',16);text(450,592,'En computadora: mantené A + S + K + L.',14,'#798773');
+
 }
 function drawScrew(){
  rect(75,129,750,393,20,shade(129,393,'#efcd91','#d9ae70'),'#bb8d53');line(98,135,802,135,'#ffe3b1',4);rect(75,493,750,29,10,'#b99864');
@@ -261,22 +330,22 @@ function drawScrew(){
  pill(450,567,'SOSTENÉ Y GIRÁ EN SENTIDO HORARIO');text(450,595,state.stripped>.1?'Desgaste de la ranura: '+Math.round(state.stripped*100)+'%':'Hacé círculos pequeños sobre la cabeza del tornillo.',15);
 }
 function drawNeedle(){
- const wet=performance.now()<state.wetUntil,ey=313+Math.sin(performance.now()/930)*5,p=state.thread;
- // A real needle silhouette with an elongated, unfilled eye at the hit point.
- oval(663,533,33,10,'#cdd5c0');
- path(c=>{c.moveTo(660,534);c.bezierCurveTo(645,473,644,240,646,208);c.quadraticCurveTo(660,168,674,208);c.bezierCurveTo(676,270,673,478,660,534);c.closePath()},shade(190,344,'#f0f2e3','#93b0a0'),'#617d6a',2.5);
- line(653,218,654,472,'#f4f6e9',3);
- oval(660,ey,21,30,'#eaf0df','#617d6a');oval(660,ey,13,21,'#fff4da','#839983');
- guide(684,ey,751,170,'OJO DE LA AGUJA');
- // Thread spool, trailing curve, and stable frayed fibers at the dragged tip.
+ const wet=performance.now()<state.wetUntil,eye=needleEye(),p=state.thread;
+ // The entire needle shares the exact pose used by the crossing test.
+ oval(eye.x+3,eye.y+220,33,10,'#cdd5c0');ctx.save();ctx.translate(eye.x,eye.y);ctx.rotate(eye.tilt);
+ path(c=>{c.moveTo(0,218);c.bezierCurveTo(-15,155,-16,-74,-14,-106);c.quadraticCurveTo(0,-146,14,-106);c.bezierCurveTo(16,-44,13,162,0,218);c.closePath()},shade(-130,348,'#f0f2e3','#93b0a0'),'#617d6a',2.5);
+ line(-7,-96,-6,157,'#f4f6e9',3);oval(0,0,20,29,'#eaf0df','#617d6a');oval(0,0,13,21,'#fff4da','#839983');ctx.restore();
+ guide(eye.x+23,eye.y-5,746,156,'OJO EN MOVIMIENTO');
  rect(79,376,59,121,9,'#b79367','#8e7753');oval(108,379,45,14,'#dfc89d','#a18d66');oval(108,493,45,14,'#dfc89d','#a18d66');rect(76,390,65,90,10,shade(390,90,'#e8976d','#b75d48'),'#9d5540');for(let i=0;i<10;i++)line(82,397+i*8,137,401+i*8,'#d78f6d',2);
- path(c=>{c.moveTo(108,404);c.bezierCurveTo(115,455,p.x-110,p.y+52,p.x-8,p.y)},null,'#a6553b',6);
- path(c=>{c.moveTo(108,402);c.bezierCurveTo(115,453,p.x-110,p.y+50,p.x-8,p.y-2)},null,'#dc9776',1.5);
+ path(c=>{c.moveTo(108,404);c.bezierCurveTo(115,455,p.x-110,p.y+52,p.x,p.y)},null,'#a6553b',6);
+ path(c=>{c.moveTo(108,402);c.bezierCurveTo(115,453,p.x-110,p.y+50,p.x-2,p.y-2)},null,'#dc9776',1.5);
  if(wet){line(p.x-14,p.y,p.x+4,p.y,'#9b4a32',5);oval(p.x-2,p.y-11,3,5,'#a7c6ba');}
- else for(let i=-3;i<=3;i++){path(c=>{c.moveTo(p.x-10,p.y);c.quadraticCurveTo(p.x+4,p.y+i*2,p.x+14+Math.abs(i)*2,p.y+i*5)},null,'#b96748',1.6);}
- if(!state.grabbing){dotted(p.x,p.y,28);guide(p.x,p.y-30,Math.max(180,p.x),180,'AGARRÁ LA PUNTA');}
- if(state.grabbing&&state.threadHold>0){ctx.beginPath();ctx.arc(660,ey,35,-Math.PI/2,-Math.PI/2+Math.min(1,state.threadHold/(wet?.85:1.25))*Math.PI*2);ctx.strokeStyle='#698d62';ctx.lineWidth=4;ctx.stroke();}
- pill(450,565,wet?'PUNTA HUMEDECIDA':'PASÁ EL HILO POR EL OJO');text(450,594,'Arrastrá la punta y sostenela dentro del ojo de la aguja.',15);
+ else for(let i=-3;i<=3;i++)path(c=>{c.moveTo(p.x-10,p.y);c.quadraticCurveTo(p.x+4,p.y+i*2,p.x+14+Math.abs(i)*2,p.y+i*5)},null,'#b96748',1.6);
+ circle(p.x,p.y,17,'transparent','#b37b52',1.5);
+ const a=needleWorld({x:-58,y:0},eye),b=needleWorld({x:64,y:0},eye);ctx.save();ctx.setLineDash([4,6]);line(a.x,a.y,b.x,b.y,'#88a17b',2);ctx.restore();arrow(b.x-11,b.y-5,b.x,b.y,'#88a17b');
+ if(state.threadStage==='through'){pill(450,558,'ENTRÓ: SEGUÍ HASTA EL OTRO LADO');}
+ else pill(450,558,wet?'PUNTA HUMEDECIDA · PASÁ POR EL OJO':'PASÁ EL HILO DE IZQUIERDA A DERECHA');
+ text(450,591,'Arrastrá desde cualquier parte. La dificultad está en pasar el hilo.',15);
 }
 
 function frame(now){
@@ -288,7 +357,7 @@ function frame(now){
  if(canvas.width!==w||canvas.height!==h){canvas.width=w;canvas.height=h}ctx.setTransform(canvas.width/W,0,0,canvas.height/H,0,0);scene();
  }requestAnimationFrame(frame)
 }
-canvas.addEventListener('pointerdown',down);canvas.addEventListener('pointermove',move);canvas.addEventListener('pointerup',up);canvas.addEventListener('pointercancel',up);canvas.addEventListener('lostpointercapture',up);canvas.addEventListener('contextmenu',e=>e.preventDefault());canvas.addEventListener('selectstart',e=>e.preventDefault());canvas.addEventListener('touchstart',e=>e.preventDefault(),{passive:false});window.addEventListener('blur',up);
+canvas.addEventListener('pointerdown',down);canvas.addEventListener('pointermove',move);canvas.addEventListener('pointerup',up);canvas.addEventListener('pointercancel',up);canvas.addEventListener('lostpointercapture',up);canvas.addEventListener('contextmenu',e=>e.preventDefault());canvas.addEventListener('selectstart',e=>e.preventDefault());canvas.addEventListener('touchstart',e=>e.preventDefault(),{passive:false});window.addEventListener('blur',up);window.addEventListener('keydown',e=>sheetKey(e,true));window.addEventListener('keyup',e=>sheetKey(e,false));
 document.querySelectorAll('[data-open]').forEach(b=>b.addEventListener('click',()=>init(b.dataset.open)));
 $('back').onclick=()=>{document.body.classList.remove('is-playing');up();mode=null;state=null;$('arcade').classList.remove('visible');$('hero').style.display='';$('catalog').style.display='';history.replaceState(null,'',location.pathname);window.scrollTo({top:0,behavior:'smooth'})};
 $('reset').onclick=()=>init(mode);$('again').onclick=()=>init(mode);
