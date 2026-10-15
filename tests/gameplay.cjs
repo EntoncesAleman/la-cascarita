@@ -156,13 +156,13 @@ test('bomb touch release cannot cancel the explosion and doing nothing also lose
  const h=setup();h.run("init('bomb')");h.fire('pointerdown',310,300);h.fire('pointerup',310,300);h.step(1.5);assert.equal(h.run('state.outcome'),'exploded');
  h.run("init('bomb')");h.step(45.1);assert.equal(h.run('state.outcome'),'exploded');h.run("init('bomb')");assert.equal(h.run('state.bombPending'),0);assert.equal(h.run('state.bombRemaining'),45);assert.equal(h.run('state.outcome'),null);
 });
-test('eight catalog entries link to existing game artwork without revealing the bomb trick',()=>{
- const html=fs.readFileSync(path.join(root,'index.html'),'utf8');assert.equal((html.match(/class="game-card"/g)||[]).length,8);
- for(const mode of ['leaf','bomb']){assert(html.includes('data-open="'+mode+'"'));assert(fs.existsSync(path.join(root,'assets',mode+'.svg')));}
+test('nine catalog entries link to existing game artwork without revealing the bomb trick',()=>{
+ const html=fs.readFileSync(path.join(root,'index.html'),'utf8');assert.equal((html.match(/class="game-card"/g)||[]).length,9);
+ for(const mode of ['leaf','bomb','sweep']){assert(html.includes('data-open="'+mode+'"'));assert(fs.existsSync(path.join(root,'assets',mode+'.svg')));}
  const card=html.split('data-open="bomb"')[0].split('<article').pop();assert(!/imposible|sin solución|siempre explota/i.test(card));
 });
-test('random sneeze affects all seven arcade games only near completion',()=>{
- const situations={tape:'state.peel=.9',usb:'state.usbCables[0].connected=true;state.usbCables[1].connected=true;state.activeCable=2;state.dockHold=.6',sheet:'sheetKeys=new Set([0,1,2,3]);syncSheet();state.sheetHold=1',screw:'state.tightness=.99',needle:"state.threadStage='through'",leaf:'state.leafAttached=true',bomb:"bombAction('check')"};
+test('random sneeze affects all eight arcade games only near completion',()=>{
+ const situations={sweep:'state.progress=.9',tape:'state.peel=.9',usb:'state.usbCables[0].connected=true;state.usbCables[1].connected=true;state.activeCable=2;state.dockHold=.6',sheet:'sheetKeys=new Set([0,1,2,3]);syncSheet();state.sheetHold=1',screw:'state.tightness=.99',needle:"state.threadStage='through'",leaf:'state.leafAttached=true',bomb:"bombAction('check')"};
  for(const [mode,prepare]of Object.entries(situations)){
   const h=setup();h.run(`init('${mode}');state.sneeze.cooldown=0;state.sneeze.random=()=>0;pressed=true;state.grabbing=true;${prepare}`);h.run(`advance(.016,${h.time})`);assert.equal(h.run('state.sneeze.count'),1,mode);assert(h.run('state.sneeze.cooldown>=9'));assert(!h.run('state.grabbing'));
   if(mode==='tape')assert(h.run('state.peel<.5'));
@@ -196,6 +196,17 @@ test('sneeze cooldown prevents immediate repeats and reset clears the animation'
 test('sneeze probability is comparable at 30 and 120 frames per second',()=>{
  const h=setup();const rates=h.run(`(()=>{let seed=47;const rng=()=>((seed=(seed*1664525+1013904223)>>>0)/4294967296);return [30,120].map(hz=>{let hits=0;for(let n=0;n<1000;n++){const s=Sneeze.create();s.random=rng;s.cooldown=0;for(let i=0;i<hz*2;i++)if(Sneeze.tick(s,1/hz,true)){hits++;break}}return hits/1000})})()`);assert(Math.abs(rates[0]-rates[1])<.07);assert(rates.every(n=>n>.6&&n<.83));
 });
+test('broom uses relative touch movement and physically pushes nearby dust toward the pan',()=>{
+ const h=setup();h.run("init('sweep');state.broom={x:500,y:330};state.dust=[{x:560,y:330,r:4,kind:0}];state.dustCollected=17");h.fire('pointerdown',300,400);assert.equal(h.run('state.broom.x'),500);h.setTime(h.time+100);h.fire('pointermove',400,400);assert.equal(h.run('state.broom.x'),600);assert.equal(h.run('state.dustCollected'),18);assert.equal(h.run('state.sweepRounds'),1);assert.equal(h.run('state.dust.length'),3);assert(!h.run('state.finished'));assert.equal(h.run('state.progress'),.99);
+});
+test('a last line of dust remains after repeated cleanup and lifting the pan',()=>{
+ const h=setup();h.run("init('sweep');state.dustCollected=18");
+ for(let i=0;i<4;i++){h.run('state.dust=lastDust();state.broom={x:525,y:335};moveBroom({x:635,y:335})');assert(h.run('state.dust.length>0'));assert(!h.run('state.finished'));assert(h.run('state.progress')<1);}
+ const before=h.run('state.dust.length');h.els['lift-pan'].onclick();assert(h.run('state.dust.length')>before);h.run('win()');assert(!h.run('state.finished'));
+});
+test('a sneeze scatters collected dust and resetting restores the starting floor',()=>{
+ const h=setup();h.run("init('sweep');state.progress=.99;state.dustCollected=18;state.dust=lastDust();pressed=true;state.grabbing=true;state.sneeze.cooldown=0;state.sneeze.random=()=>0;advance(.016,1000)");assert.equal(h.run('state.sneeze.count'),1);assert(h.run('state.dust.length')>3);assert(h.run('state.progress')<.99);assert(!h.run('state.grabbing'));h.run("init('sweep')");assert.equal(h.run('state.dust.length'),18);assert.equal(h.run('state.progress'),0);
+});
 test('all scenes render after interaction and tool changes',()=>{
- const h=setup();for(const mode of ['tape','usb','sheet','screw','needle','leaf','bomb'])h.run(`init('${mode}');scene()`);const e=setup(true);e.run("reset();draw(.016);tool='spoon';draw(.016);tool='tweezers';draw(.016)");
+ const h=setup();for(const mode of ['tape','usb','sheet','screw','needle','leaf','bomb','sweep'])h.run(`init('${mode}');scene()`);const e=setup(true);e.run("reset();draw(.016);tool='spoon';draw(.016);tool='tweezers';draw(.016)");
 });
