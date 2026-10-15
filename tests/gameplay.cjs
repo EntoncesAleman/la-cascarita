@@ -26,13 +26,20 @@ test('touch capture blocks default gesture, ignores a second finger, cancels cle
 test('dragging a touched object preserves the initial grab offset',()=>{
  const h=setup();h.run("init('needle')");h.fire('pointerdown',205,370);h.setTime(h.time+40);h.fire('pointermove',210,374);assert.equal(h.run('state.thread.x'),180);assert.equal(h.run('state.thread.y'),354);
 });
-test('tape needs a held grip and three short strokes, all within the canvas',()=>{
- const h=setup();h.run("init('tape');state.tipAngle=0");h.fire('pointerdown',581,328);h.setTime(h.time+20);h.fire('pointermove',620,328);assert.equal(h.run('state.peel'),0);assert(h.run('state.fail')>0);h.fire('pointerup',620,328);h.step(.5);
+test('tape grabs its visible projected cut edge, not the hole or a detached hotspot',()=>{
+ const h=setup();h.run("init('tape');state.tipAngle=0");
+ const hole=h.run('tapeGeometry().center');h.fire('pointerdown',hole.x,hole.y);assert(!h.run('state.grabbing'));h.fire('pointerup',hole.x,hole.y);h.step(.5);
+ const tip=h.run('tapeGeometry().tip');h.fire('pointerdown',tip.x,tip.y);assert(h.run('state.grabbing'));assert(Math.abs(h.run('mx')-tip.x)<1e-8);assert(Math.abs(h.run('my')-tip.y)<1e-8);
+ h.step(.4);h.setTime(h.time+40);h.fire('pointermove',tip.x+4,tip.y);assert(Math.abs(h.run('mx')-tip.x-4)<1e-8);h.fire('pointerup',tip.x+4,tip.y);
+ h.run('state.peel=.5');const shifted=h.run('tapeGeometry().tip');assert(shifted.x>tip.x);h.fire('pointerdown',shifted.x,shifted.y);assert(h.run('state.grabbing'));
+});
+test('perspective tape still needs a held grip and three strokes inside the canvas',()=>{
+ const h=setup();h.run("init('tape');state.tipAngle=0");let tip=h.run('tapeGeometry().tip');h.fire('pointerdown',tip.x,tip.y);h.setTime(h.time+20);h.fire('pointermove',tip.x+39,tip.y);assert.equal(h.run('state.peel'),0);assert(h.run('state.fail')>0);h.fire('pointerup',tip.x+39,tip.y);h.step(.5);
  for(let stroke=0;stroke<3;stroke++){
-  h.fire('pointerdown',581,328);h.step(.4);
-  for(let x=585;x<=781;x+=4){h.setTime(h.time+25);h.fire('pointermove',x,328);}
+  tip=h.run('tapeGeometry().tip');h.fire('pointerdown',tip.x,tip.y);h.step(.4);const span=h.run('state.peelSpan');assert(tip.x+span<900);
+  for(let i=1;i<=50;i++){h.setTime(h.time+25);h.fire('pointermove',tip.x+span*i/50,tip.y);}
   if(stroke===0){assert(h.run('state.peel')>.35);assert(!h.run('state.finished'));}
-  h.fire('pointerup',781,328);
+  h.fire('pointerup',tip.x+span,tip.y);
  }
  assert(h.run('state.finished'));
 });
