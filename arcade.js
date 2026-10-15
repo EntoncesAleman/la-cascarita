@@ -2,10 +2,10 @@
 const $=id=>document.getElementById(id),canvas=$('scene'),ctx=canvas.getContext('2d');
 const defs={
  tape:{title:'Encontrá la punta.',label:'UN ROLLO. NADA MÁS.',instructions:'Buscá el extremo de la cinta alrededor del rollo. Presioná sobre la punta y arrastrá lentamente hacia la derecha para despegarla. Si tirás muy rápido, se corta.',quote:'“Seguro está por acá.”',meter:'CINTA DESPEGADA'},
- usb:{title:'Del otro lado.',label:'UN PUERTO. TRES INTENTOS NO ALCANZAN.',instructions:'Arrastrá el conector hasta el puerto. Giralo con el botón cuando sea necesario. Si llegás torcido o demasiado rápido, rebota.',quote:'“Probá del otro lado.”',meter:'ALINEACIÓN'},
- sheet:{title:'La sábana ajustable.',label:'CUATRO ESQUINAS. INFINITAS MALDICIONES.',instructions:'Tocá cada esquina del colchón para estirar la sábana. Si forzás el orden, una esquina puesta se suelta. El truco es alternar diagonales.',quote:'“La primera ya estaba puesta.”',meter:'ESQUINAS AJUSTADAS'},
- screw:{title:'Una vueltita más.',label:'NO PIERDAS EL TORNILLO.',instructions:'Presioná y dibujá círculos alrededor de la cabeza del tornillo, despacio y en sentido horario. Si girás demasiado rápido, se barre. Podés aflojar presión soltando.',quote:'“Le falta apenas una vueltita.”',meter:'ROSCA AJUSTADA'},
- needle:{title:'Enhebrá eso.',label:'EL HILO SE DESHILACHA SOLO.',instructions:'Arrastrá la punta del hilo hasta el pequeño ojo de la aguja a la derecha. Acercate despacio. Podés chupar el hilo para endurecer la punta durante unos segundos.',quote:'“Con buena luz sería fácil.”',meter:'PUNTA ENHEBRADA'}
+ usb:{title:'Del otro lado.',label:'UN CABLE. UN PUERTO.',instructions:'Arrastrá el conector hasta el puerto. Giralo con el botón cuando sea necesario. Si llegás torcido o demasiado rápido, rebota.',quote:'“Probá del otro lado.”',meter:'ALINEACIÓN'},
+ sheet:{title:'La sábana ajustable.',label:'UNA SÁBANA. CUATRO ESQUINAS.',instructions:'Tocá cada esquina del colchón para estirar la sábana. Si forzás el orden, una esquina puesta se suelta. El truco es alternar diagonales.',quote:'“La primera ya estaba puesta.”',meter:'ESQUINAS AJUSTADAS'},
+ screw:{title:'Una vueltita más.',label:'UN TORNILLO. UNA VUELTA MÁS.',instructions:'Presioná y dibujá círculos alrededor de la cabeza del tornillo, despacio y en sentido horario. Si girás demasiado rápido, se barre. Podés aflojar presión soltando.',quote:'“Le falta apenas una vueltita.”',meter:'ROSCA AJUSTADA'},
+ needle:{title:'Enhebrá eso.',label:'UN HILO. UNA AGUJA.',instructions:'Arrastrá la punta del hilo hasta el pequeño ojo de la aguja a la derecha. Acercate despacio. Podés chupar el hilo para endurecer la punta durante unos segundos.',quote:'“Con buena luz sería fácil.”',meter:'PUNTA ENHEBRADA'}
 };
 let mode=null,state=null,pressed=false,origin=null,lastPointer=null,tick=0,lastFrame=0;
 let mx=190,my=310;const W=900,H=660;
@@ -16,7 +16,7 @@ function sound(){/* Diseño sin audio obligatorio */ }
 function init(m){
  mode=m;pressed=false;origin=null;lastPointer=null;tick=0;mx=190;my=310;
  state={attempts:0,elapsed:0,started:performance.now(),finished:false,progress:0,heat:0,fail:0,grabbing:false,penalty:0,tipAngle:rand(-1.8,1.8),peel:0,rotation:0,position:{x:170,y:330},fitted:[false,false,false,false],stripped:0,angle:null,thread:{x:175,y:350},wetUntil:0,threadHold:0,needleWobble:0};
- $('hero').style.display='none';$('catalog').style.display='none';$('arcade').classList.add('visible');$('game-title').textContent=defs[m].title.toUpperCase();$('game-subtitle').textContent='La paciencia es un ingrediente opcional';
+ $('hero').style.display='none';$('catalog').style.display='none';$('arcade').classList.add('visible');$('game-title').textContent=defs[m].title.toUpperCase();$('game-subtitle').textContent='Dificultad estimada: baja';
  $('canvas-label').textContent=defs[m].label;$('instructions').textContent=defs[m].instructions;$('meter-label').textContent=defs[m].meter;
  $('overlay').classList.remove('on');setQuote(defs[m].quote);actions();location.hash=m;
  window.scrollTo({top:0,behavior:'smooth'});
@@ -164,3 +164,4 @@ document.querySelectorAll('[data-open]').forEach(b=>b.addEventListener('click',(
 $('back').onclick=()=>{mode=null;state=null;$('arcade').classList.remove('visible');$('hero').style.display='';$('catalog').style.display='';history.replaceState(null,'',location.pathname);window.scrollTo({top:0,behavior:'smooth'})};
 $('reset').onclick=()=>init(mode);$('again').onclick=()=>init(mode);
 const initial=location.hash.slice(1);if(defs[initial])init(initial);requestAnimationFrame(frame);
+
