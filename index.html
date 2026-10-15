@@ -8,10 +8,10 @@
 <body><header><div class="brand"><span></span>la cascarita.</div><div class="tag">El pequeño infierno de la cocina</div><button class="sound" id="sound" aria-pressed="false">Sonido: apagado</button></header>
 <main><div class="intro"><div><div class="tag">Una tarea insignificante. Supuestamente.</div><h1>Sacá. La. <em>Cáscara.</em></h1><p class="subtitle">Un huevo crudo. Un pedacito de cáscara.<br>¿Qué tan difícil puede ser?</p></div><div class="difficulty"><i></i>Dificultad: ridícula</div></div>
 <div class="layout"><div class="board"><div class="board-label">UN SOLO PEDACITO. NADA MÁS.</div><canvas id="game" tabindex="0" aria-label="Juego: elegí mano, cuchara o pinza. Mové con el mouse o tocando; mantené presionado para levantar la cáscara. Con teclado usá flechas y espacio."></canvas><div class="hint" id="hint">La paciencia es un ingrediente.</div><div class="overlay" id="overlay"><div class="card"><h2 id="title">Parece fácil.</h2><p id="desc">Elegí la mano, una cuchara o una pinza. Acercate muy despacio, mantené presionado para agarrar la cáscara y llevála al borde del plato.</p><button class="primary" id="start">Bueno, a ver →</button></div></div></div>
-<aside><div class="stats"><div class="stat"><label>INTENTOS</label><strong id="attempts">00</strong></div><div class="stat"><label>TIEMPO</label><strong id="time">0:00</strong></div></div><div class="tools"><h3>CON QUÉ LO INTENTÁS</h3><div class="tool-buttons"><button class="tool" data-tool="finger" aria-pressed="true">☝ Mano</button><button class="tool" data-tool="spoon" aria-pressed="false">🥄 Cuchara</button><button class="tool" data-tool="tweezers" aria-pressed="false">♢ Pinza</button></div><p class="tool-note" id="tool-note">Un solo dedo. Difícil de agarrar y fácil de empujar.</p></div><div class="instructions"><h3>LA TEORÍA ES SIMPLE</h3><div class="step"><span class="num">1</span><div><b>Acercá la herramienta.</b>Despacio. La clara siente tu desesperación.</div></div><div class="step"><span class="num">2</span><div><b>Enganchá y sostené.</b>Mantené presionado sobre la cáscara.</div></div><div class="step"><span class="num">3</span><div><b>Llevala al borde.</b>Si acelerás, salta de nuevo al huevo.</div></div></div><div class="meter-label"><span>AGITACIÓN DE LA CLARA</span><span id="agitation">0%</span></div><div class="meter"><div id="bar"></div></div><div class="quote" id="quote">“Es literalmente un pedacito.”</div><div class="small" id="record">Tu dignidad sigue intacta. Por ahora.</div><button class="reset" id="reset">↻ Romper otro huevo</button></aside></div><footer><span>HECHO PARA PONER A PRUEBA TU PACIENCIA.</span><span>Mouse / táctil · Flechas + espacio</span></footer></main>
+<aside><div class="stats"><div class="stat"><label>INTENTOS</label><strong id="attempts">00</strong></div><div class="stat"><label>TIEMPO</label><strong id="time">0:00</strong></div></div><div class="tools"><h3>CON QUÉ LO INTENTÁS</h3><div class="tool-buttons"><button class="tool" data-tool="finger" aria-pressed="true">☝ Mano</button><button class="tool" data-tool="spoon" aria-pressed="false">🥄 Cuchara</button><button class="tool" data-tool="tweezers" aria-pressed="false">♢ Pinza</button></div><p class="tool-note" id="tool-note">El índice de toda una mano. No apures el agarre; cerca del borde, todavía más despacio.</p></div><div class="instructions"><h3>LA TEORÍA ES SIMPLE</h3><div class="step"><span class="num">1</span><div><b>Acercá la herramienta.</b>Despacio. La clara siente tu desesperación.</div></div><div class="step"><span class="num">2</span><div><b>Enganchá y sostené.</b>Mantené presionado sobre la cáscara.</div></div><div class="step"><span class="num">3</span><div><b>Llevala al borde.</b>Si acelerás, salta de nuevo al huevo.</div></div></div><div class="meter-label"><span>AGITACIÓN DE LA CLARA</span><span id="agitation">0%</span></div><div class="meter"><div id="bar"></div></div><div class="quote" id="quote">“Es literalmente un pedacito.”</div><div class="small" id="record">Tu dignidad sigue intacta. Por ahora.</div><button class="reset" id="reset">↻ Romper otro huevo</button></aside></div><footer><span>HECHO PARA PONER A PRUEBA TU PACIENCIA.</span><span>Mouse / táctil · Flechas + espacio</span></footer></main>
 <script>'use strict';
 const canvas=document.querySelector('canvas'),ctx=canvas.getContext('2d'),$=id=>document.getElementById(id);
-let active=false,won=false,attempts=0,startTime=0,elapsed=0,last=0,t=0,heat=0,holding=false,down=false,grip=0,cooldown=0,spillTimer=0,spills=0,sound=false,audio,tool="finger";const tools={finger:{radius:20,grip:.68,speed:83,note:"Un solo dedo. Difícil de agarrar y fácil de empujar."},spoon:{radius:33,grip:.45,speed:112,note:"Más superficie, pero la cáscara se resbala con los movimientos bruscos."},tweezers:{radius:13,grip:.52,speed:96,note:"Precisa, pero tenés que apuntar exactamente al pedacito."}};
+let active=false,won=false,attempts=0,startTime=0,elapsed=0,last=0,t=0,heat=0,holding=false,down=false,grip=0,cooldown=0,spillTimer=0,spills=0,sound=false,audio,tool="finger";const tools={finger:{radius:16,grip:.78,speed:76,note:"Un solo dedo. Difícil de agarrar y fácil de empujar."},spoon:{radius:29,grip:.56,speed:103,note:"Más superficie, pero la cáscara se resbala con los movimientos bruscos."},tweezers:{radius:11,grip:.60,speed:92,note:"Precisa, pero tenés que apuntar exactamente al pedacito."}};
 let p={x:500,y:470},prev={...p},shell={x:600,y:310,vx:0,vy:0,angle:.2},ripples=[],keys=new Set();
 const quotes=['“Casi. Qué palabra horrible.”','“Se fue para allá. Obviamente.”','“La cáscara tiene otros planes.”','“Una cuchara sería demasiado fácil.”','“Respirá. No ayuda, pero respirá.”','“Tu huevo está ganando.”'];
 let best;try{best=Number(localStorage.getItem('cascarita-best'))||0;}catch{}if(best)$('record').textContent='Mejor tiempo: '+format(best);
@@ -28,9 +28,9 @@ function release(){if(holding)miss('“Se te resbaló. Qué sorpresa.”');down=
 canvas.addEventListener('pointerup',release);canvas.addEventListener('pointercancel',release);window.addEventListener('blur',()=>{keys.clear();release();});canvas.addEventListener('keydown',e=>{if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' '].includes(e.key)){e.preventDefault();keys.add(e.key);if(e.key===' ')press();}});canvas.addEventListener('keyup',e=>{keys.delete(e.key);if(e.key===' ')release();});document.querySelectorAll('[data-tool]').forEach(b=>b.onclick=()=>{if(holding)miss('“Cambiar de utensilio no es hacer trampa. Casi.”');down=false;grip=0;tool=b.dataset.tool;document.querySelectorAll('[data-tool]').forEach(x=>x.setAttribute('aria-pressed',String(x===b)));$('tool-note').textContent=tools[tool].note;});$('start').onclick=reset;$('reset').onclick=reset;$('sound').onclick=()=>{sound=!sound;$('sound').textContent='Sonido: '+(sound?'encendido':'apagado');$('sound').setAttribute('aria-pressed',sound);tone(400);};
 function ellipse(x,y,rx,ry,fill,stroke){ctx.beginPath();ctx.ellipse(x,y,rx,ry,0,0,Math.PI*2);ctx.fillStyle=fill;ctx.fill();if(stroke){ctx.strokeStyle=stroke;ctx.stroke();}}
 function draw(dt){t+=dt;if(active){if(spillTimer>0){spillTimer=Math.max(0,spillTimer-dt);if(spillTimer===0){heat=.3;$("quote").textContent="“La clara se calmó. Tu dignidad, no.”";}}elapsed=(performance.now()-startTime)/1000;let speedKey=keys.has('Shift')?35:90;p.x+=((keys.has('ArrowRight')?1:0)-(keys.has('ArrowLeft')?1:0))*speedKey*dt;p.y+=((keys.has('ArrowDown')?1:0)-(keys.has('ArrowUp')?1:0))*speedKey*dt;p.x=Math.max(80,Math.min(920,p.x));p.y=Math.max(55,Math.min(680,p.y));let speed=Math.hypot(p.x-prev.x,p.y-prev.y)/Math.max(dt,.001);speed=Math.min(speed,1500);if(spillTimer===0)heat=Math.max(0,Math.min(1,heat+((speed>160?speed/2200:0)-.12)*dt));if(heat>=1&&spillTimer===0)overflow();cooldown=Math.max(0,cooldown-dt);let dx=shell.x-p.x,dy=shell.y-p.y,d=Math.hypot(dx,dy)||1;
-if(holding&&spillTimer===0){if(speed>tools[tool].speed-heat*40){miss('“Despacio. Te dije despacio.”');}else{shell.x+=(p.x-shell.x)*Math.min(1,dt*18);shell.y+=(p.y-shell.y)*Math.min(1,dt*18);let edge=Math.hypot((shell.x-500)/350,(shell.y-365)/265);if(edge>1.015)win();}}
-else{let evade=Math.max(0,1-d/155)*(38+speed*.50+heat*210);shell.vx+=dx/d*evade*dt*8;shell.vy+=dy/d*evade*dt*8;shell.vx+=Math.sin(t*1.6)*9*dt;shell.vy+=Math.cos(t*1.3)*7*dt;shell.vx*=Math.exp(-dt*2.8);shell.vy*=Math.exp(-dt*2.8);shell.x+=shell.vx*dt;shell.y+=shell.vy*dt;let q=Math.hypot((shell.x-500)/300,(shell.y-365)/220);if(q>1){shell.x=500+(shell.x-500)/q;shell.y=365+(shell.y-365)/q;shell.vx*=-.65;shell.vy*=-.65;}if(down&&cooldown===0&&spillTimer===0){if(d<tools[tool].radius&&speed<tools[tool].speed*.82&&heat<.66){grip+=dt;if(grip>tools[tool].grip){holding=true;tone(420);$('quote').textContent='“La tenés. No te emociones.”';}}else{grip=0;if(d>tools[tool].radius+12){cooldown=.42;}}}shell.angle+=dt*(shell.vx*.01+.2);}
-if(speed>130&&Math.random()<dt*12)ripples.push({x:p.x,y:p.y,r:8,a:.3});prev={...p};$('time').textContent=format(elapsed);$('attempts').textContent=String(attempts).padStart(2,'0');$('agitation').textContent=Math.round(heat*100)+'%';$('bar').style.width=heat*100+'%';$('hint').textContent=spillTimer>0?'¡CLARA DESBORDADA! '+spillTimer.toFixed(1)+' s para reintentar':holding?'Ahora al borde. Despacito.':down&&grip>0?'Sostené…':'Acercate despacio · Mantené presionado para agarrar';}
+if(holding&&spillTimer===0){let edgeNow=Math.hypot((shell.x-500)/350,(shell.y-365)/265);let safeSpeed=tools[tool].speed-heat*30-(edgeNow>.72?15:0);if(speed>safeSpeed){miss(edgeNow>.72?'“Estabas a centímetros. Se te resbaló.”':'“Despacio. Te dije despacio.”');}else{shell.x+=(p.x-shell.x)*Math.min(1,dt*18);shell.y+=(p.y-shell.y)*Math.min(1,dt*18);let edge=Math.hypot((shell.x-500)/350,(shell.y-365)/265);if(edge>1.015)win();}}
+else{let evade=Math.max(0,1-d/165)*(46+speed*.56+heat*230);shell.vx+=dx/d*evade*dt*8;shell.vy+=dy/d*evade*dt*8;shell.vx+=Math.sin(t*1.6)*9*dt;shell.vy+=Math.cos(t*1.3)*7*dt;shell.vx*=Math.exp(-dt*2.8);shell.vy*=Math.exp(-dt*2.8);shell.x+=shell.vx*dt;shell.y+=shell.vy*dt;let q=Math.hypot((shell.x-500)/300,(shell.y-365)/220);if(q>1){shell.x=500+(shell.x-500)/q;shell.y=365+(shell.y-365)/q;shell.vx*=-.65;shell.vy*=-.65;}if(down&&cooldown===0&&spillTimer===0){if(d<tools[tool].radius&&speed<tools[tool].speed*.74&&heat<.62){grip+=dt;if(grip>tools[tool].grip){holding=true;tone(420);$('quote').textContent='“La tenés. No te emociones.”';}}else{grip=0;if(d>tools[tool].radius+12){cooldown=.42;}}}shell.angle+=dt*(shell.vx*.01+.2);}
+if(speed>110&&Math.random()<dt*12)ripples.push({x:p.x,y:p.y,r:8,a:.3});prev={...p};$('time').textContent=format(elapsed);$('attempts').textContent=String(attempts).padStart(2,'0');$('agitation').textContent=Math.round(heat*100)+'%';$('bar').style.width=heat*100+'%';$('hint').textContent=spillTimer>0?'¡CLARA DESBORDADA! '+spillTimer.toFixed(1)+' s para reintentar':holding?'Ahora al borde. Despacito.':down&&grip>0?'Sostené…':'Acercate despacio · Mantené presionado para agarrar';}
 ctx.clearRect(0,0,1000,735);ctx.fillStyle=spillTimer>0?'#edd4c2':'#e6e7d5';ctx.fillRect(0,0,1000,735);ctx.strokeStyle='#d6dac7';ctx.lineWidth=1;for(let x=30;x<1000;x+=65){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,735);ctx.stroke();}for(let y=25;y<735;y+=65){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(1000,y);ctx.stroke();}
 ctx.shadowColor='#55604730';ctx.shadowBlur=30;ctx.shadowOffsetY=20;ellipse(500,365,405,309,'#f9f7ec');ctx.shadowBlur=0;ctx.shadowOffsetY=0;ctx.lineWidth=2;ellipse(500,365,378,285,'#eeeede','#d9dccb');ellipse(500,365,353,268,'#f9f7ed','#e0e1d2');
 ctx.save();ctx.beginPath();ctx.ellipse(500,365,345,259,0,0,Math.PI*2);ctx.clip();ctx.beginPath();ctx.moveTo(290,255);ctx.bezierCurveTo(385,180,590,230,660,287);ctx.bezierCurveTo(819,305,780,502,641,509);ctx.bezierCurveTo(520,599,325,524,302,438);ctx.bezierCurveTo(213,405,212,313,290,255);ctx.fillStyle='#d6d19f65';ctx.fill();ctx.strokeStyle='#ccc79d70';ctx.stroke();
@@ -43,13 +43,45 @@ if(active||won){ctx.save();ctx.translate(p.x,p.y);
 if(grip>0&&!holding){ctx.beginPath();ctx.arc(0,0,29,-Math.PI/2,-Math.PI/2+grip/tools[tool].grip*Math.PI*2);ctx.strokeStyle='#667548';ctx.lineWidth=3;ctx.stroke();}
 ctx.shadowColor='#36321b30';ctx.shadowBlur=12;ctx.shadowOffsetY=7;ctx.lineWidth=2;
 if(tool==='finger'){
-  // El punto de contacto es la punta del índice: una sola mano, no dos dedos sueltos.
-  ctx.rotate(-.25);ctx.fillStyle='#dba98b';ctx.strokeStyle='#a96f56';
-  ctx.beginPath();ctx.roundRect(-30,48,91,135,31);ctx.fill();ctx.stroke();
-  ctx.beginPath();ctx.roundRect(-9,0,24,100,12);ctx.fill();ctx.stroke();
-  for(let k=0;k<3;k++){ctx.beginPath();ctx.roundRect(16+k*15,53+k*7,22,55-k*8,10);ctx.fill();ctx.stroke();}
-  ctx.save();ctx.translate(-30,97);ctx.rotate(-.55);ctx.beginPath();ctx.roundRect(-14,0,25,67,12);ctx.fill();ctx.stroke();ctx.restore();
-  ctx.shadowBlur=0;ctx.fillStyle='#efd0b9';ctx.beginPath();ctx.roundRect(-5,7,15,20,7);ctx.fill();
+  // La coordenada (0,0) coincide con la yema del índice; mano completa vista desde arriba.
+  // La palma y el resto de los dedos acompañan al índice, no crean puntos de contacto.
+  ctx.rotate(-0.12);
+  const skin=ctx.createLinearGradient(-46,10,80,205);
+  skin.addColorStop(0,'#edbca0');skin.addColorStop(.5,'#dba184');skin.addColorStop(1,'#c78b70');
+  ctx.fillStyle=skin;ctx.strokeStyle='#9c654f';ctx.lineWidth=2.3;
+  // Muñeca y palma de silueta continua.
+  ctx.beginPath();
+  ctx.moveTo(-27,201);ctx.bezierCurveTo(-35,173,-37,142,-43,115);
+  ctx.bezierCurveTo(-49,98,-49,72,-36,59);
+  ctx.bezierCurveTo(-29,51,-20,51,-12,52);
+  ctx.lineTo(-11,36);ctx.bezierCurveTo(-13,13,-13,1,-1,-1);
+  ctx.bezierCurveTo(14,-4,16,9,16,29);ctx.lineTo(18,70);
+  ctx.bezierCurveTo(26,52,41,50,49,62);
+  ctx.bezierCurveTo(58,57,73,67,70,81);
+  ctx.bezierCurveTo(89,84,92,104,78,115);
+  ctx.bezierCurveTo(80,142,62,155,53,165);
+  ctx.bezierCurveTo(44,177,45,190,47,204);ctx.closePath();
+  ctx.fill();ctx.stroke();
+  // Tres nudillos y dedos plegados al costado del índice.
+  ctx.strokeStyle='#b47a60';ctx.lineWidth=2;
+  for(const [x,y,dx] of [[37,76,5],[57,91,7],[66,116,4]]){
+    ctx.beginPath();ctx.moveTo(x-5,y+4);ctx.quadraticCurveTo(x+dx,y-10,x+dx+7,y+6);ctx.stroke();
+  }
+  // Pulgar parcialmente flexionado hacia el lado opuesto.
+  ctx.fillStyle='#dfa88c';ctx.strokeStyle='#a86e57';ctx.lineWidth=2.1;
+  ctx.beginPath();ctx.moveTo(-36,89);ctx.bezierCurveTo(-62,88,-77,101,-77,119);
+  ctx.bezierCurveTo(-76,134,-60,140,-50,129);
+  ctx.lineTo(-32,114);ctx.closePath();ctx.fill();ctx.stroke();
+  ctx.strokeStyle='#bb8169';ctx.lineWidth=1.4;ctx.beginPath();ctx.moveTo(-49,105);ctx.quadraticCurveTo(-61,107,-63,121);ctx.stroke();
+  // Un único índice estirado: falanges, articulaciones, brillo y uña.
+  ctx.strokeStyle='#c18568';ctx.lineWidth=1.3;
+  for(const y of [31,53]){ctx.beginPath();ctx.moveTo(-6,y);ctx.quadraticCurveTo(2,y+3,10,y);ctx.stroke();}
+  ctx.shadowBlur=0;ctx.shadowOffsetY=0;
+  ctx.fillStyle='#f2cbb8';ctx.beginPath();ctx.roundRect(-8,4,15,21,7);ctx.fill();
+  ctx.strokeStyle='#d99c87';ctx.lineWidth=1;ctx.stroke();
+  ctx.fillStyle='#fff0df88';ctx.beginPath();ctx.ellipse(-4,9,3,5,-.3,0,Math.PI*2);ctx.fill();
+  ctx.strokeStyle='#ffffffaa';ctx.lineWidth=2;ctx.beginPath();ctx.arc(0,0,7,Math.PI*1.12,Math.PI*1.86);ctx.stroke();
+
 }else{
   ctx.rotate(-.55);ctx.fillStyle='#9aa7a4';ctx.strokeStyle='#4d605d';
   ctx.beginPath();ctx.roundRect(-7,17,14,180,7);ctx.fill();ctx.stroke();ctx.shadowBlur=0;
