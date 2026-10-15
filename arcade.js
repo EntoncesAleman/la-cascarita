@@ -61,7 +61,7 @@ function down(e){
  if(!mode||state.finished||state.penalty>0||activePointer!==null)return;
  e.preventDefault();inputType=e.pointerType||'mouse';activePointer=e.pointerId;canvas.setPointerCapture(e.pointerId);
  const p=point(e);pressed=true;origin=p;lastPointer=p;tick=performance.now();state.motion=0;mx=p.x;my=p.y;grabOffset={x:0,y:0};
- if(mode==='tape'){const tip={x:450+Math.cos(state.tipAngle)*131,y:328+Math.sin(state.tipAngle)*131};if(distance(p,tip)<touchRadius(22,37)){state.grabbing=true;state.tapeGrip=0;state.peelStart=state.peel;state.peelSpan=Math.max(80,Math.min(200,W-p.x-28));mx=tip.x;my=tip.y;grabOffset={x:tip.x-p.x,y:tip.y-p.y};setQuote('“La agarraste. Tirones cortos, sin apurarte.”')}else failure('“Eso no era la punta.”')}
+ if(mode==='tape'){const tip=tapeGeometry().tip;if(distance(p,tip)<touchRadius(22,37)){state.grabbing=true;state.tapeGrip=0;state.peelStart=state.peel;state.peelSpan=Math.max(80,Math.min(200,W-p.x-28));mx=tip.x;my=tip.y;grabOffset={x:tip.x-p.x,y:tip.y-p.y};setQuote('“La agarraste. Tirones cortos, sin apurarte.”')}else failure('“Eso no era la punta.”')}
  if(mode==='usb'){if(distance(p,state.position)<touchRadius(28,105)){state.grabbing=true;grabOffset={x:state.position.x-p.x,y:state.position.y-p.y}}else failure('“Eso no es el enchufe.”')}
  if(mode==='sheet'){const i=corners.findIndex(v=>distance(v,p)<touchRadius(24,65));if(i>=0&&!state.fitted[i]){state.grabbing=true;state.cornerIndex=i;state.cornerHold=0;setQuote('“Sostené para estirar. La tela necesita un momento.”')}else if(i>=0)setQuote('“Esa esquina ya estaba puesta.”');else failure('“La sábana no se ajusta desde el medio.”')}
  if(mode==='screw'){const r=distance(p,{x:450,y:330});if(r<touchRadius(38,115)){state.grabbing=true;state.angle=r>=26?Math.atan2(p.y-330,p.x-450):null}else failure('“El destornillador patinó en la mesa.”')}
@@ -158,33 +158,51 @@ function scene(){
  if(state.penalty>0){rect(280,77,340,36,18,'#f5e0d0');text(450,101,mode==='tape'?'La cinta se soltó. Volvé a la pestaña.':'Volvé a intentar, despacio.',14,'#9a4d32')}
  ctx.restore();
 }
-function drawTape(){
- oval(450,505,205,29,'#b8aa8166');
- // Thickness, concentric layers, and cardboard core make this read as a tape roll.
- path(c=>{c.moveTo(277,328);c.lineTo(277,365);c.bezierCurveTo(277,593,623,593,623,365);c.lineTo(623,328);c.closePath()},shade(328,180,'#ddb46b','#c79547'),'#a07737');
- for(let i=0;i<6;i++)line(288+i*55,372,288+i*55,419+Math.sin(i/5*Math.PI)*76,'#e7cc8b',2);
- circle(450,328,173,shade(155,346,'#ffe4a0','#e6bb62'),'#b58d45',3);
- ctx.beginPath();ctx.arc(450,328,168,3.3,5.8);ctx.strokeStyle='#fff1c4';ctx.lineWidth=5;ctx.stroke();
- [101,113,126,140,154,165].forEach(r=>circle(450,328,r,'transparent','#d5bb7d',1));
- circle(450,328,88,'#ba976c','#937750',3);oval(450,340,76,65,'#e9d9b5','#947a54');
- path(c=>{c.arc(450,328,88,Math.PI,Math.PI*2);c.bezierCurveTo(525,329,520,345,520,354);c.bezierCurveTo(488,299,411,299,380,354);c.bezierCurveTo(377,343,373,335,362,328)},'#c4a17a',null);
- ctx.beginPath();ctx.arc(450,328,159,3.65,5.35);ctx.strokeStyle='#faf0c5';ctx.lineWidth=8;ctx.stroke();
- const tx=450+Math.cos(state.tipAngle)*131,ty=328+Math.sin(state.tipAngle)*131;
- const end=state.grabbing?{x:mx,y:my}:{x:tx+state.peel*260,y:ty-28-state.peel*40};
- if(state.peel>0||state.grabbing){
- path(c=>{c.moveTo(tx-12,ty-9);c.bezierCurveTo(tx+40,ty-60,end.x-40,end.y-45,end.x,end.y-17);c.lineTo(end.x,end.y+17);c.bezierCurveTo(end.x-50,end.y-5,tx+36,ty-22,tx+12,ty+9);c.closePath()},'#fff6d4d9','#a38d59',2);
- line(end.x-7,end.y-13,end.x-7,end.y+12,'#e0c78b',2);
- }
- // The lifted folded tab stays centered on the existing 37px interaction target.
- ctx.save();ctx.translate(tx,ty);ctx.rotate(-.25);
- path(c=>{c.moveTo(-22,14);c.lineTo(-19,-10);c.quadraticCurveTo(-10,-24,14,-20);c.lineTo(25,6);c.quadraticCurveTo(4,-4,-22,14);c.closePath()},'#fff9df','#957b48',2.5);
- path(c=>{c.moveTo(-19,-10);c.quadraticCurveTo(-3,-5,25,6)},null,'#d2b876',2);ctx.restore();
- if(!state.grabbing){dotted(tx,ty,32,'#957b48');guide(tx,ty-28,tx>490?690:230,ty<290?170:190,'PESTAÑA LEVANTADA');}
- else{circle(end.x,end.y,23,'transparent','#b96748',2);ctx.beginPath();ctx.arc(tx,ty,33,-Math.PI/2,-Math.PI/2+state.tapeGrip/.38*Math.PI*2);ctx.strokeStyle='#729b65';ctx.lineWidth=4;ctx.stroke();pill(450,547,state.tapeGrip<.38?'SOSTENÉ PARA LEVANTAR LA PESTAÑA':'TIRÁ · SOLTÁ · VOLVÉ A AGARRAR');}
- if(!state.grabbing){arrow(350,550,537,550);text(450,582,'Tirones cortos a la derecha. Soltá para volver a agarrar.',16);}
- else{text(450,585,Math.round(state.peel*100)+'% de cinta despegada',15);}
- if(state.penalty>0){line(end.x-15,end.y-22,end.x+9,end.y-8,palette.rust,3);}
+// One projection defines the visible roll, attached ribbon, and interactive cut edge.
+function tapeGeometry(){
+ const center={x:340,y:278},rx=192,ry=105,depth=100,tilt=-.24;
+ const project=(x,y)=>({x:center.x+x*Math.cos(tilt)-y*Math.sin(tilt),y:center.y+x*Math.sin(tilt)+y*Math.cos(tilt)});
+ const seam=.66+clamp(state.tipAngle,-1.8,1.8)/1.8*.2;
+ const sx=rx*Math.cos(seam),sy=ry*Math.sin(seam);
+ const top=project(sx,sy),bottom=project(sx,sy+depth);
+ const tip=project(sx+48+state.peel*34,sy+depth/2-12-state.peel*12);
+ return{center,rx,ry,depth,tilt,project,top,bottom,tip};
 }
+function drawTape(){
+ const g=tapeGeometry();oval(370,482,223,30,'#ac946b3d');
+ ctx.save();ctx.translate(g.center.x,g.center.y);ctx.rotate(g.tilt);
+ // Front band of a short cylinder, bounded by the same projected ellipses as its top.
+ path(c=>{c.moveTo(g.rx,0);c.lineTo(g.rx,g.depth);c.ellipse(0,g.depth,g.rx,g.ry,0,0,Math.PI);c.lineTo(-g.rx,0);c.ellipse(0,0,g.rx,g.ry,0,Math.PI,0,true);c.closePath()},shade(25,170,'#f5d18b','#cf9c4d'),'#b48846',2.5);
+ for(let a=.17;a<Math.PI;a+=.22){const x=Math.cos(a)*g.rx,y=Math.sin(a)*g.ry;line(x,y+7,x,y+g.depth-7,'#ffe4ab80',1.5);}
+ // The center really is an opening: the inner cardboard wall sits below the upper rim.
+ oval(0,0,98,54,'#a58a64','#977a52');
+ ctx.save();ctx.beginPath();ctx.ellipse(0,0,98,54,0,0,Math.PI*2);ctx.clip();
+ rect(-102,-60,204,132,0,shade(-50,120,'#aa8760','#d5b78c'));
+ oval(0,47,93,50,'#f2e4c7','#947650');ctx.restore();
+ ctx.beginPath();ctx.ellipse(0,0,g.rx,g.ry,0,0,Math.PI*2);ctx.moveTo(98,0);ctx.ellipse(0,0,98,54,0,0,Math.PI*2,true);
+ ctx.fillStyle=shade(-105,210,'#fff0bd','#e8be6b');ctx.fill('evenodd');ctx.strokeStyle='#b28d4f';ctx.lineWidth=2;ctx.stroke();
+ for(const r of [.59,.66,.74,.82,.90,.96]){ctx.beginPath();ctx.ellipse(0,0,g.rx*r,g.ry*r,0,0,Math.PI*2);ctx.strokeStyle='#d7b16a99';ctx.lineWidth=1;ctx.stroke();}
+ ctx.beginPath();ctx.ellipse(0,0,g.rx-6,g.ry-5,0,Math.PI*1.08,Math.PI*1.86);ctx.strokeStyle='#fff8dc';ctx.lineWidth=5;ctx.stroke();
+ ctx.beginPath();ctx.ellipse(0,0,101,57,0,0,Math.PI*2);ctx.strokeStyle='#fff3d0';ctx.lineWidth=3;ctx.stroke();
+ ctx.restore();
+ // The peeled tape is the cylinder's full-width outer band, not a separate floating marker.
+ const end=state.grabbing?{x:mx,y:my}:g.tip;
+ const half={x:-Math.sin(g.tilt)*g.depth*.43,y:Math.cos(g.tilt)*g.depth*.43};
+ const upper={x:end.x-half.x,y:end.y-half.y},lower={x:end.x+half.x,y:end.y+half.y};
+ const curl=state.grabbing?Math.min(42,Math.max(8,(end.x-g.top.x)*.15)):18;
+ // A small cast shadow makes the lifted flap legible against the side of the roll.
+ path(c=>{c.moveTo(g.top.x+3,g.top.y+9);c.bezierCurveTo(g.top.x+24,g.top.y+3,upper.x-24,upper.y+curl+8,upper.x+3,upper.y+8);c.lineTo(lower.x+3,lower.y+8);c.bezierCurveTo(lower.x-22,lower.y+curl+12,g.bottom.x+22,g.bottom.y+5,g.bottom.x+3,g.bottom.y+9);c.closePath()},'#8b6a3b20',null);
+ path(c=>{c.moveTo(g.top.x,g.top.y);c.bezierCurveTo(g.top.x+23,g.top.y-11,upper.x-26,upper.y+curl,upper.x,upper.y);c.lineTo(lower.x,lower.y);c.bezierCurveTo(lower.x-27,lower.y+curl,g.bottom.x+23,g.bottom.y-7,g.bottom.x,g.bottom.y);c.closePath()},'#fff0b8c9','#b79551',2);
+ path(c=>{c.moveTo(g.top.x+7,g.top.y+9);c.bezierCurveTo(g.top.x+35,g.top.y+2,upper.x-23,upper.y+curl+9,upper.x-6,upper.y+10)},null,'#fffbed',3);
+ // This edge is exactly the point used by pointerdown and grabOffset.
+ line(upper.x,upper.y,lower.x,lower.y,'#ad8440',3);
+ line(upper.x-5,upper.y+1,lower.x-5,lower.y+1,'#fff8df',2);
+ if(!state.grabbing){dotted(end.x,end.y,29,'#ac7d3e');guide(upper.x,upper.y-3,699,190,'AGARRÁ ESTE BORDE');arrow(640,457,765,457);pill(700,492,'TIRÁ HACIA LA DERECHA');}
+ else{circle(end.x,end.y,25,'transparent','#b96748',2);ctx.beginPath();ctx.arc(end.x,end.y,33,-Math.PI/2,-Math.PI/2+state.tapeGrip/.38*Math.PI*2);ctx.strokeStyle='#729b65';ctx.lineWidth=4;ctx.stroke();pill(450,547,state.tapeGrip<.38?'SOSTENÉ PARA LEVANTAR EL BORDE':'TIRÁ · SOLTÁ · VOLVÉ A AGARRAR');}
+ text(450,584,state.grabbing?Math.round(state.peel*100)+'% de cinta despegada':'La tira sale del lateral del rollo. Agarrá su borde.',16);
+ if(state.penalty>0){line(upper.x-12,upper.y-13,upper.x+10,upper.y-4,palette.rust,3);}
+}
+
 function drawUSB(){
  // Laptop side: the port's contact center remains exactly (681,330).
  oval(681,484,140,18,'#b8aa8166');rect(568,215,247,248,20,'#8c987c55');rect(566,206,247,248,17,shade(206,248,'#d9e5da','#9cb6a6'),'#6c8c7e');rect(566,206,247,28,12,'#eaf2df');line(576,243,803,243,'#8d9f8d',2);
