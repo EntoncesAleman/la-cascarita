@@ -26,7 +26,7 @@ function init(m){
  if(m==='sweep')state.dust=floorDust();
  if(m==='usb')createUSB();if(m==='sushi')createSushi();
  $('hero').style.display='none';$('catalog').style.display='none';$('arcade').classList.add('visible');$('game-title').textContent=defs[m].title.toUpperCase();$('game-subtitle').textContent='Dificultad estimada: baja';$('input-help').textContent={sushi:'Sostené para agarrar, llevá despacio y soltá sobre el plato. No aprietes de más.',sweep:'Barré hacia la pala de la derecha. Después, levantala.',leaf:'Deslizá para mover la lengua. Despegá la hojita y bajala despacio.',bomb:'Revisá el panel y elegí un ajuste. Todavía hay tiempo.',tape:'Sostené la pestaña un instante. Tirones cortos a la derecha; soltá y repetí.',usb:'Conectá los tres cables. Probá puertos: los colores pueden engañar.',sheet:'Un dedo en cada esquina: sostené los cuatro a la vez. En compu: A + S + K + L.',screw:'Girá despacio y soltá en el punto justo. Una vuelta de más puede partir la madera.',needle:'Mové el hilo desde cualquier parte. Atravesá el ojo de izquierda a derecha.'}[m];
- $('task-image').src='assets/'+m+(['leaf','bomb','sweep','sushi'].includes(m)?'.svg':'-960.webp');$('task-image').alt=defs[m].title;$('task-caption').textContent=defs[m].title;
+ $('task-image').src='assets/'+m+'-960.webp';$('task-image').alt=defs[m].title;$('task-caption').textContent=defs[m].title;
  $('canvas-label').textContent=defs[m].label;$('instructions').textContent=defs[m].instructions;$('meter-label').textContent=defs[m].meter;
  $('overlay').classList.remove('on');setQuote(defs[m].quote);actions();location.hash=m;
  window.scrollTo({top:0,behavior:'smooth'});
