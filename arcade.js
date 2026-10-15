@@ -76,7 +76,7 @@ function chaosOverlay(){
  if(!state.chaos||mode==='bomb'||state.chaosShown||state.chaosTime<1.2)return;
  state.chaosShown=true;
  const lines={tape:'La cinta quedó hecha tiras.',usb:'Cables por todos lados. Ninguno conectado.',sheet:'La sábana no resistió otra esquina.',screw:'No quedó ni la tabla.',needle:'El hilo se cortó y la aguja se dobló.',leaf:'La hojita terminó en todas partes.',sweep:'Ahora sí hay algo para barrer.',sushi:'Arroz por todo el piso.',dog:'El queso voló. El perro está encantado.'};
- $('overlay-title').textContent='Bueno. Se rompió todo.';$('overlay-text').textContent=lines[mode];$('again').textContent='Armar todo de nuevo →';$('overlay').classList.add('on');
+ $('overlay-title').textContent='Bueno. Se rompió todo.';$('overlay-text').textContent=lines[mode];$('again').textContent='Jugar de nuevo';$('overlay').classList.add('on');
 }
 function failure(msg){
  state.attempts++;state.fail++;state.penalty=.45;state.noticeTime=4;state.grabbing=false;state.threadHold=0;state.dockHold=0;state.cornerHold=0;
@@ -92,7 +92,7 @@ function win(){
  if(mode==='bomb')return;
  if(state.finished)return;if(Sneeze.finish(state.sneeze)){sneezeImpact();return}state.finished=true;state.outcome='won';state.progress=1;
  $('overlay-title').textContent='¿Al fin?';$('overlay-text').textContent='Lo conseguiste en '+fmt(state.elapsed)+' y '+state.attempts+' intentos. La humanidad esperaba menos de vos.';
- $('again').textContent='Sufrir otra vez →';$('overlay').classList.add('on');setQuote('“Una victoria absolutamente innecesaria.”');
+ $('again').textContent='Jugar de nuevo';$('overlay').classList.add('on');setQuote('“Una victoria absolutamente innecesaria.”');
 }
 function fmt(s){return Math.floor(s/60)+':'+String(Math.floor(s%60)).padStart(2,'0')}
 function point(e){const r=canvas.getBoundingClientRect();return{x:(e.clientX-r.left)*W/r.width,y:(e.clientY-r.top)*H/r.height}}
@@ -257,7 +257,7 @@ function bombAction(action,wireIndex=null){
 function explodeBomb(){
  if(!state||state.finished)return;state.finished=true;state.outcome='exploded';state.grabbing=false;state.progress=.99;state.fail++;
  $('overlay-title').textContent='Estaba casi.';$('overlay-text').textContent='Las señales parecían correctas. Algo quedó pendiente.';
- $('again').textContent='Esta vez sí →';$('overlay').classList.add('on');setQuote('“La próxima seguro.”');
+ $('again').textContent='Jugar de nuevo';$('overlay').classList.add('on');setQuote('“La próxima seguro.”');
 }
 function bombWireAt(p){return p.y>=260&&p.y<=354?bombWires.findIndex(w=>Math.abs(p.x-w.x)<37):-1;}
 function bombTouch(p){
@@ -418,7 +418,7 @@ function breakWood(){
  const id=activePointer;state.woodBroken=true;state.woodDamage=1;state.finished=true;state.outcome='broken';state.grabbing=false;state.fail++;state.attempts++;
  state.tightness=0;state.progress=0;state.angle=null;state.screwHint='broken';pressed=false;activePointer=null;
  if(id!==null&&canvas.hasPointerCapture?.(id))canvas.releasePointerCapture(id);
- $('overlay-title').textContent='Te pasaste de lo verde.';$('overlay-text').textContent='La madera se partió. La barra vuelve al principio: soltá dentro de la zona verde en el próximo intento.';$('again').textContent='Cambiar la tabla →';$('overlay').classList.add('on');setQuote('“Era soltar ahí. Justo ahí.”');syncActions();
+ $('overlay-title').textContent='Te pasaste de lo verde.';$('overlay-text').textContent='La madera se partió. La barra vuelve al principio: soltá dentro de la zona verde en el próximo intento.';$('again').textContent='Jugar de nuevo';$('overlay').classList.add('on');setQuote('“Era soltar ahí. Justo ahí.”');syncActions();
 }
 function up(e){
  if(mode==='sheet'){sheetUp(e);return}
