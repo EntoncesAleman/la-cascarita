@@ -23,7 +23,7 @@ function setQuote(x){$('quote').textContent=x}
 function sound(){/* Diseño sin audio obligatorio */ }
 function init(m){
  document.body.classList.add('is-playing');mode=m;sheetPointers.clear();sheetKeys.clear();sneezeBlockedKeys.clear();activePointer=null;pressed=false;origin=null;lastPointer=null;tick=0;mx=190;my=310;
- state={attempts:0,elapsed:0,started:performance.now(),finished:false,progress:0,heat:0,fail:0,grabbing:false,penalty:0,noticeTime:0,tipAngle:rand(-1.8,1.8),peel:0,rotation:0,position:{x:170,y:330},fitted:[false,false,false,false],stripped:0,angle:null,thread:{x:175,y:350},wetUntil:0,threadHold:0,needleWobble:0,motion:0,peelStart:0,peelSpan:200,tapeGrip:0,dockHold:0,socketFace:Math.floor(rand(0,2)),cornerIndex:null,cornerHold:0,lastCorner:null,sheetHold:0,threadStage:'approach',threadInsertion:0,tightness:0,woodDamage:0,woodBroken:false,outcome:null,screwHint:'loose',tongue:{x:450,y:425},leaf:{x:494,y:267},leafLoosen:0,leafAttached:false,bombRemaining:0,bombStarted:false,bombTool:false,bombCuts:[false,false,false,false],bombFeedback:0,bombDial:0,bombButton:false,bombKnobs:[0,0],bombSwitches:[false,false,false],bombAux:[false,false],bombCode:'',bombKey:-1,bombChoice:null,bombMessage:'Panel en espera',sneeze:Sneeze.create(),broom:{x:280,y:430},dust:[],dustCollected:0,sweepRounds:0};
+ state={attempts:0,chaos:false,chaosTime:0,chaosShown:false,elapsed:0,started:performance.now(),finished:false,progress:0,heat:0,fail:0,grabbing:false,penalty:0,noticeTime:0,tipAngle:rand(-1.8,1.8),peel:0,rotation:0,position:{x:170,y:330},fitted:[false,false,false,false],stripped:0,angle:null,thread:{x:175,y:350},wetUntil:0,threadHold:0,needleWobble:0,motion:0,peelStart:0,peelSpan:200,tapeGrip:0,dockHold:0,socketFace:Math.floor(rand(0,2)),cornerIndex:null,cornerHold:0,lastCorner:null,sheetHold:0,threadStage:'approach',threadInsertion:0,tightness:0,woodDamage:0,woodBroken:false,outcome:null,screwHint:'loose',tongue:{x:450,y:425},leaf:{x:494,y:267},leafLoosen:0,leafAttached:false,bombRemaining:0,bombStarted:false,bombTool:false,bombCuts:[false,false,false,false],bombFeedback:0,bombDial:0,bombButton:false,bombKnobs:[0,0],bombSwitches:[false,false,false],bombAux:[false,false],bombCode:'',bombKey:-1,bombChoice:null,bombMessage:'Panel en espera',sneeze:Sneeze.create(),broom:{x:280,y:430},dust:[],dustCollected:0,sweepRounds:0};
  if(m==='sweep')state.dust=floorDust();
  if(m==='dog')createDog();if(m==='usb')createUSB();if(m==='sushi')createSushi();
  $('hero').style.display='none';$('catalog').style.display='none';$('arcade').classList.add('visible');$('game-title').textContent=defs[m].title.toUpperCase();$('game-subtitle').textContent='Dificultad estimada: baja';$('input-help').textContent={dog:'Deslizá despacio. Esperá a que abra la boca y sostené el bocado.',sushi:'Sostené para agarrar, llevá despacio y soltá sobre el plato. No aprietes de más.',sweep:'Barré hacia la pala de la derecha. Después, levantala.',leaf:'Deslizá para mover la lengua. Despegá la hojita y bajala despacio.',bomb:'Revisá el panel y elegí un ajuste. Todavía hay tiempo.',tape:'Sostené la pestaña un instante. Tirones cortos a la derecha; soltá y repetí.',usb:'Conectá los tres cables. Probá puertos: los colores pueden engañar.',sheet:'Un dedo en cada esquina: sostené los cuatro a la vez. En compu: A + S + K + L.',screw:'Girá despacio y soltá en el punto justo. Una vuelta de más puede partir la madera.',needle:'Mové el hilo desde cualquier parte. Atravesá el ojo de izquierda a derecha.'}[m];
@@ -42,8 +42,10 @@ function actions(){
  if(mode==='tape')html='<button id="find">🔎 Mirar de cerca</button>';
  if(mode==='sheet')html='<span class="input-help">4 dedos · En compu: A + S + K + L</span>';
  if(mode==='screw')html='<button id="steady">Respirar un segundo</button>';
- $('actions').innerHTML=html;
- const bind=(id,fn)=>{const n=$(id);if(n)n.onclick=fn};
+ $('actions').innerHTML=html+'<button id="break-all" class="break-all" hidden>Romper todo</button>';
+ syncActions();
+ const bind=(id,fn)=>{const n=$(id);if(n)n.onclick=()=>{if(!state||state.finished||state.chaos)return;fn();syncActions()}};
+ bind('break-all',destroyGame);
  bind('cheese',()=>{if(state.dogStage!=='offer'||state.finished)return;state.dogWrapped=true;setQuote('“Ahora sí que parece solamente queso.”');});
  bind('lift-pan',liftDustpan);
  bind('pliers',()=>bombAction('pliers'));
@@ -52,6 +54,29 @@ function actions(){
  bind('lick',()=>{state.wetUntil=performance.now()+6500;state.threadHold=0;setQuote('“Sí. Acabás de chupar el hilo. Está temporalmente rígido.”')});
  bind('find',()=>{state.tipAngle=0;state.attempts++;setQuote('“Ahí estaba. ¿Y ahora cómo lo despegás?”')});
  bind('steady',()=>{state.stripped=Math.max(0,state.stripped-.26);setQuote('“Respirás. El tornillo no.”')});
+}
+function syncActions(){
+ if(!state)return;
+ $('break-all').hidden=!Desastre.ready(state.attempts)||state.finished||state.chaos;
+ for(const id of ['cheese','lift-pan','pliers','manual','verify','rotate','lick','find','steady','break-all']){const button=$(id);if(button)button.disabled=state.finished||state.chaos;}
+}
+function destroyGame(){
+ if(!state||state.finished||state.chaos||!Desastre.ready(state.attempts))return;
+ const ids=mode==='sheet'?Array.from(sheetPointers.keys()):activePointer===null?[]:[activePointer];
+ state.chaos=true;state.chaosTime=0;state.grabbing=false;pressed=false;activePointer=null;sheetPointers.clear();sheetKeys.clear();state.dockHold=0;state.dogFeed=0;state.threadHold=0;
+ if(mode==='sushi'){state.sushiHeld=false;for(const c of state.sushiPieces){c.broken=true;c.delivered=false;}}
+ if(mode==='sheet')state.fitted=[false,false,false,false];
+ if(mode==='screw'){state.woodDamage=1;state.woodBroken=true;}
+ if(mode==='usb'){for(const c of state.usbCables){c.connected=false;c.position={x:c.home.x+80+c.id*25,y:c.home.y+45};}for(const p of state.usbPorts)p.occupiedBy=null;}
+ if(mode!=='bomb'){state.finished=true;state.outcome='chaos';state.progress=0;}
+ for(const id of ids)if(canvas.hasPointerCapture?.(id))canvas.releasePointerCapture(id);
+ setQuote(mode==='bomb'?'“El panel dejó de responder. Eso no puede ser bueno.”':'“Bueno. Se terminó la tarea.”');syncActions();
+}
+function chaosOverlay(){
+ if(!state.chaos||mode==='bomb'||state.chaosShown||state.chaosTime<1.2)return;
+ state.chaosShown=true;
+ const lines={tape:'La cinta quedó hecha tiras.',usb:'Cables por todos lados. Ninguno conectado.',sheet:'La sábana no resistió otra esquina.',screw:'No quedó ni la tabla.',needle:'El hilo se cortó y la aguja se dobló.',leaf:'La hojita terminó en todas partes.',sweep:'Ahora sí hay algo para barrer.',sushi:'Arroz por todo el piso.',dog:'El queso voló. El perro está encantado.'};
+ $('overlay-title').textContent='Bueno. Se rompió todo.';$('overlay-text').textContent=lines[mode];$('again').textContent='Armar todo de nuevo →';$('overlay').classList.add('on');
 }
 function failure(msg){
  state.attempts++;state.fail++;state.penalty=.45;state.noticeTime=4;state.grabbing=false;state.threadHold=0;state.dockHold=0;state.cornerHold=0;
@@ -211,7 +236,7 @@ const bombExtras=[
 ];
 const bombWires=[{x:310,color:'#d2746d'},{x:405,color:'#6ca6bd'},{x:500,color:'#dcb14e'},{x:595,color:'#9e94be'}];
 function bombAction(action,wireIndex=null){
- if(mode!=='bomb'||!state||state.finished)return;
+ if(mode!=='bomb'||!state||state.finished||state.chaos)return;
  if(!state.bombStarted){state.bombStarted=true;state.bombRemaining=rand(12,39.5);}
  state.attempts++;state.bombChoice=action;state.bombFeedback=2.5;
  if(action==='pliers')state.bombTool=true;
@@ -324,6 +349,7 @@ function advanceSushi(dt){
 }
 
 function down(e){
+ if(state?.chaos)return;
  if(mode==='sheet'){sheetDown(e);return}
  if(!mode||state.finished||state.penalty>0||activePointer!==null)return;
  e.preventDefault();inputType=e.pointerType||'mouse';activePointer=e.pointerId;canvas.setPointerCapture(e.pointerId);
@@ -436,8 +462,9 @@ function sneezeImpact(){
 
 function advance(dt,now){
  if(!state)return;
+ if(state.chaos){state.chaosTime+=dt;chaosOverlay();}
  state.noticeTime=Math.max(0,state.noticeTime-dt);
- if(mode!=='bomb'&&Sneeze.tick(state.sneeze,dt,almostThere())){sneezeImpact();return}
+ if(!state.chaos&&mode!=='bomb'&&Sneeze.tick(state.sneeze,dt,almostThere())){sneezeImpact();return}
  if(state.finished)return;
  state.elapsed=mode==='bomb'?(state.bombStarted?state.elapsed+dt:0):(now-state.started)/1000;state.penalty=Math.max(0,state.penalty-dt);state.heat=Math.max(0,state.heat-dt*.045);
  if(now-tick>100)state.motion=0;
@@ -490,8 +517,10 @@ function scene(){
  // Flat vector work surface, with generous space around the contact points.
  rect(35,74,830,542,28,'#c9bb9766');rect(35,65,830,542,26,shade(65,542,'#fff8e6','#f3e8cd'),'#e0cfaa');
  line(65,67,835,67,'#fffdf3',3);
+ ctx.save();if(state.chaos){ctx.translate(W/2,H/2);ctx.rotate(-.06*Math.min(1,state.chaosTime));ctx.translate(-W/2,-H/2);}
  if(mode==='dog')drawDog();if(mode==='tape')drawTape();if(mode==='usb')drawUSB();if(mode==='sheet')drawSheet();if(mode==='screw')drawScrew();if(mode==='needle')drawNeedle();if(mode==='leaf')drawLeaf();if(mode==='bomb')drawBomb();if(mode==='sweep')drawSweep();if(mode==='sushi')drawSushi();
- if(state.noticeTime>0){rect(280,77,340,36,18,'#f5e0d0');text(450,101,mode==='tape'?'La cinta se soltó. Volvé a la pestaña.':mode==='leaf'?'Se escapó la hojita. Probá más suave.':mode==='sushi'?'Se desarmó. Probá con otra pieza.':mode==='dog'?'El queso sí. La pastilla, todavía no.':'Volvé a intentar, despacio.',14,'#9a4d32')}
+ ctx.restore();if(state.chaos)Desastre.draw(ctx,W,H,state.chaosTime,mode);
+ if(state.noticeTime>0&&!state.chaos){rect(280,77,340,36,18,'#f5e0d0');text(450,101,mode==='tape'?'La cinta se soltó. Volvé a la pestaña.':mode==='leaf'?'Se escapó la hojita. Probá más suave.':mode==='sushi'?'Se desarmó. Probá con otra pieza.':mode==='dog'?'El queso sí. La pastilla, todavía no.':'Volvé a intentar, despacio.',14,'#9a4d32')}
  Sneeze.draw(ctx,state.sneeze,W,H);
  ctx.restore();
 }
@@ -793,7 +822,7 @@ function drawSushi(){
 function frame(now){
  const dt=Math.min(.05,(now-lastFrame)/1000||.016);lastFrame=now;
  if(mode&&state){advance(dt,now);
- $('attempts').textContent=String(state.attempts).padStart(2,'0');$('time').textContent=fmt(state.elapsed);
+ syncActions();$('attempts').textContent=String(state.attempts).padStart(2,'0');$('time').textContent=fmt(state.elapsed);
  $('percent').textContent=Math.round(state.progress*100)+'%';$('progress').style.width=Math.round(state.progress*100)+'%';
  const dpr=Math.min(window.devicePixelRatio||1,2),r=canvas.getBoundingClientRect(),w=Math.round(r.width*dpr),h=Math.round(r.height*dpr);
  if(canvas.width!==w||canvas.height!==h){canvas.width=w;canvas.height=h}ctx.setTransform(canvas.width/W,0,0,canvas.height/H,0,0);scene();
