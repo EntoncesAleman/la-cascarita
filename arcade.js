@@ -1,6 +1,7 @@
 'use strict';
 const $=id=>document.getElementById(id),canvas=$('scene'),ctx=canvas.getContext('2d');
 const defs={
+ sweep:{title:'La última barrida.',label:'UNA ESCOBA. UNA PALA.',instructions:'Arrastrá desde cualquier parte para mover la escoba. Juntá la basura y empujala hacia la boca de la pala, a la derecha. Cuando esté todo junto, levantá la pala.',quote:'“Una última pasada y termino.”',meter:'PISO BARRIDO'},
  leaf:{title:'Un poquito de verde.',label:'UN DIENTE. UNA HOJITA.',instructions:'Arrastrá desde cualquier parte para mover la lengua. Apoyala despacio sobre la hojita hasta despegarla y después bajala sin apurarte. Si la empujás de golpe, vuelve a meterse.',quote:'“Debe ser un poquito de perejil.”',meter:'HOJITA DESPEGADA'},
  bomb:{title:'Un ajuste pendiente.',label:'UN PANEL. UN PEQUEÑO AJUSTE.',instructions:'Revisá el panel. Podés tocar sus cables, el botón o el selector, consultar las instrucciones o validar el estado. El reloj está corriendo.',quote:'“Parece bastante claro.”',meter:'VERIFICACIÓN'},
  tape:{title:'Encontrá la punta.',label:'UN ROLLO. NADA MÁS.',instructions:'Agarrá la pestaña y hacé tirones cortos hacia la derecha. Podés soltar y volver a agarrar para seguir. Si tirás de golpe o te desviás, se corta.',quote:'“Seguro está por acá.”',meter:'CINTA DESPEGADA'},
@@ -20,16 +21,18 @@ function setQuote(x){$('quote').textContent=x}
 function sound(){/* Diseño sin audio obligatorio */ }
 function init(m){
  document.body.classList.add('is-playing');mode=m;sheetPointers.clear();sheetKeys.clear();sneezeBlockedKeys.clear();activePointer=null;pressed=false;origin=null;lastPointer=null;tick=0;mx=190;my=310;
- state={attempts:0,elapsed:0,started:performance.now(),finished:false,progress:0,heat:0,fail:0,grabbing:false,penalty:0,tipAngle:rand(-1.8,1.8),peel:0,rotation:0,position:{x:170,y:330},fitted:[false,false,false,false],stripped:0,angle:null,thread:{x:175,y:350},wetUntil:0,threadHold:0,needleWobble:0,motion:0,peelStart:0,peelSpan:200,tapeGrip:0,dockHold:0,socketFace:Math.floor(rand(0,2)),cornerIndex:null,cornerHold:0,lastCorner:null,sheetHold:0,threadStage:'approach',threadInsertion:0,tightness:0,woodDamage:0,woodBroken:false,outcome:null,screwHint:'loose',tongue:{x:450,y:425},leaf:{x:494,y:267},leafLoosen:0,leafAttached:false,bombRemaining:45,bombPending:0,bombChoice:null,bombMessage:'Panel en espera',sneeze:Sneeze.create()};
+ state={attempts:0,elapsed:0,started:performance.now(),finished:false,progress:0,heat:0,fail:0,grabbing:false,penalty:0,tipAngle:rand(-1.8,1.8),peel:0,rotation:0,position:{x:170,y:330},fitted:[false,false,false,false],stripped:0,angle:null,thread:{x:175,y:350},wetUntil:0,threadHold:0,needleWobble:0,motion:0,peelStart:0,peelSpan:200,tapeGrip:0,dockHold:0,socketFace:Math.floor(rand(0,2)),cornerIndex:null,cornerHold:0,lastCorner:null,sheetHold:0,threadStage:'approach',threadInsertion:0,tightness:0,woodDamage:0,woodBroken:false,outcome:null,screwHint:'loose',tongue:{x:450,y:425},leaf:{x:494,y:267},leafLoosen:0,leafAttached:false,bombRemaining:45,bombPending:0,bombChoice:null,bombMessage:'Panel en espera',sneeze:Sneeze.create(),broom:{x:280,y:430},dust:[],dustCollected:0,sweepRounds:0};
+ if(m==='sweep')state.dust=floorDust();
  if(m==='usb')createUSB();
- $('hero').style.display='none';$('catalog').style.display='none';$('arcade').classList.add('visible');$('game-title').textContent=defs[m].title.toUpperCase();$('game-subtitle').textContent='Dificultad estimada: baja';$('input-help').textContent={leaf:'Deslizá para mover la lengua. Despegá la hojita y bajala despacio.',bomb:'Revisá el panel y elegí un ajuste. Todavía hay tiempo.',tape:'Sostené la pestaña un instante. Tirones cortos a la derecha; soltá y repetí.',usb:'Conectá los tres cables. Probá puertos: los colores pueden engañar.',sheet:'Un dedo en cada esquina: sostené los cuatro a la vez. En compu: A + S + K + L.',screw:'Girá despacio y soltá en el punto justo. Una vuelta de más puede partir la madera.',needle:'Mové el hilo desde cualquier parte. Atravesá el ojo de izquierda a derecha.'}[m];
- $('task-image').src='assets/'+m+(['leaf','bomb'].includes(m)?'.svg':'-960.webp');$('task-image').alt=defs[m].title;$('task-caption').textContent=defs[m].title;
+ $('hero').style.display='none';$('catalog').style.display='none';$('arcade').classList.add('visible');$('game-title').textContent=defs[m].title.toUpperCase();$('game-subtitle').textContent='Dificultad estimada: baja';$('input-help').textContent={sweep:'Barré hacia la pala de la derecha. Después, levantala.',leaf:'Deslizá para mover la lengua. Despegá la hojita y bajala despacio.',bomb:'Revisá el panel y elegí un ajuste. Todavía hay tiempo.',tape:'Sostené la pestaña un instante. Tirones cortos a la derecha; soltá y repetí.',usb:'Conectá los tres cables. Probá puertos: los colores pueden engañar.',sheet:'Un dedo en cada esquina: sostené los cuatro a la vez. En compu: A + S + K + L.',screw:'Girá despacio y soltá en el punto justo. Una vuelta de más puede partir la madera.',needle:'Mové el hilo desde cualquier parte. Atravesá el ojo de izquierda a derecha.'}[m];
+ $('task-image').src='assets/'+m+(['leaf','bomb','sweep'].includes(m)?'.svg':'-960.webp');$('task-image').alt=defs[m].title;$('task-caption').textContent=defs[m].title;
  $('canvas-label').textContent=defs[m].label;$('instructions').textContent=defs[m].instructions;$('meter-label').textContent=defs[m].meter;
  $('overlay').classList.remove('on');setQuote(defs[m].quote);actions();location.hash=m;
  window.scrollTo({top:0,behavior:'smooth'});
 }
 function actions(){
  let html='';
+ if(mode==='sweep')html='<button id="lift-pan">Levantar la pala</button>';
  if(mode==='bomb')html='<button id="manual">Consultar instrucciones</button><button id="verify">Validar panel</button>';
  if(mode==='usb')html='<button id="rotate">↻ Girar conector</button>';
  if(mode==='needle')html='<button id="lick">👅 Chupar el hilo</button>';
@@ -38,6 +41,7 @@ function actions(){
  if(mode==='screw')html='<button id="steady">Respirar un segundo</button>';
  $('actions').innerHTML=html;
  const bind=(id,fn)=>{const n=$(id);if(n)n.onclick=fn};
+ bind('lift-pan',liftDustpan);
  bind('manual',()=>bombAction('manual'));bind('verify',()=>bombAction('check'));
  bind('rotate',()=>{let c=cable();if(!c||c.connected){const next=state.usbCables.find(v=>!v.connected);if(!next)return;state.activeCable=next.id;c=next;}c.face=(c.face+1)%2;state.dockHold=0;state.attempts++;setQuote('“Cable '+c.label+' girado. Probá ahora.”');});
  bind('lick',()=>{state.wetUntil=performance.now()+6500;state.threadHold=0;setQuote('“Sí. Acabás de chupar el hilo. Está temporalmente rígido.”')});
@@ -46,13 +50,15 @@ function actions(){
 }
 function failure(msg){
  state.attempts++;state.fail++;state.penalty=.45;state.grabbing=false;state.threadHold=0;state.dockHold=0;state.cornerHold=0;
- setQuote(msg); if(mode==='tape'){state.peel=Math.max(0,state.peel-.17);state.progress=state.peel}
+ setQuote(msg); if(mode==='sweep'){state.dust.push(...floorDust(8));state.dustCollected=Math.max(0,state.dustCollected-8);state.progress=Math.min(.99,state.dustCollected/18);}
+ if(mode==='tape'){state.peel=Math.max(0,state.peel-.17);state.progress=state.peel}
  if(mode==='usb'){const c=cable();if(c&&!c.connected)c.position={...c.home};}
  if(mode==='needle'){state.thread={x:175,y:350};state.heat=Math.min(1,state.heat+.12)}
  if(mode==='screw')state.stripped=clamp(state.stripped+.22,0,1);
  if(mode==='sheet')state.heat=clamp(state.heat+.18,0,1);
 }
 function win(){
+ if(mode==='sweep')return;
  if(mode==='bomb'){explodeBomb();return}
  if(state.finished)return;if(Sneeze.finish(state.sneeze)){sneezeImpact();return}state.finished=true;state.outcome='won';state.progress=1;
  $('overlay-title').textContent='¿Al fin?';$('overlay-text').textContent='Lo conseguiste en '+fmt(state.elapsed)+' y '+state.attempts+' intentos. La humanidad esperaba menos de vos.';
@@ -156,11 +162,53 @@ function bombTouch(p){
  if(p.y>230&&p.y<365)return'wire';if(distance(p,{x:330,y:455})<80)return'button';if(distance(p,{x:647,y:455})<75)return'dial';return'check';
 }
 
+const dustpan={x:610,y:294,w:118,h:106};
+function floorDust(n=18){return Array.from({length:n},(_,i)=>({x:230+(i*73)%290,y:230+(i*47)%240,r:3+i%4,kind:i%3}))}
+function lastDust(){return[0,1,2].map(i=>({x:578-i*9,y:329+i*8,r:2.5,kind:0}))}
+function leaveDust(){
+ state.sweepRounds++;state.dust=lastDust();state.progress=Math.min(.99,state.dustCollected/18);
+ setQuote(['“Quedó esa rayita. Una pasada más.”','“Estaba justo debajo de la pala.”','“Ahora sí. No, pará: falta un poquito.”'][state.sweepRounds%3]);
+}
+function liftDustpan(){
+ if(mode!=='sweep'||state.finished)return;state.attempts++;state.dust.push(...lastDust());state.dustCollected=Math.max(0,state.dustCollected-2);state.progress=Math.min(.99,state.dustCollected/18);setQuote('“La pala está levantada. La rayita sigue en el piso.”');
+}
+function moveBroom(p){
+ const old=state.broom,next={x:clamp(p.x,140,735),y:clamp(p.y,175,510)},dx=next.x-old.x,dy=next.y-old.y,len=dx*dx+dy*dy;state.broom=next;
+ if(len<.1)return;
+ for(const grain of state.dust){
+  const t=clamp(((grain.x-old.x)*dx+(grain.y-old.y)*dy)/len,0,1),near={x:old.x+t*dx,y:old.y+t*dy};
+  if(distance(grain,near)<48&&(grain.x-old.x)*dx+(grain.y-old.y)*dy>=-20){grain.x=clamp(grain.x+dx*.95,110,778);grain.y=clamp(grain.y+dy*.95,175,520);}
+ }
+ const kept=state.dust.filter(d=>!(dx>0&&d.x>=dustpan.x&&d.x<=dustpan.x+dustpan.w&&d.y>=dustpan.y&&d.y<=dustpan.y+dustpan.h));
+ state.dustCollected+=state.dust.length-kept.length;state.dust=kept;state.progress=Math.min(.99,state.dustCollected/18);
+ if(!state.dust.length)leaveDust();
+}
+function drawSweep(){
+ rect(87,127,731,395,16,shade(127,395,'#eee4cb','#d8c6a1'),'#c9b78f');
+ for(let x=225;x<815;x+=145)line(x,130,x,519,'#c9b894',2);for(let y=235;y<520;y+=100)line(91,y,814,y,'#c9b894',2);
+ // The lip in the drawing is also the collection boundary.
+ oval(673,415,92,15,'#b19e7750');path(c=>{c.moveTo(dustpan.x,294);c.lineTo(714,267);c.quadraticCurveTo(758,324,729,400);c.lineTo(dustpan.x,400);c.closePath()},shade(270,130,'#c1d6a7','#789b76'),'#567d60',3);
+ path(c=>{c.moveTo(626,306);c.lineTo(702,285);c.quadraticCurveTo(731,328,712,380);c.lineTo(626,380);c.closePath()},'#90ad83','#6b916b',2);
+ line(610,294,610,400,'#e1e8bb',6);line(733,290,767,197,'#587a5d',17);line(731,286,765,195,'#a6bd8a',5);rect(756,169,25,42,10,'#6c9068','#4e7355');
+ for(const d of state.dust){
+  if(d.kind===1){ctx.save();ctx.translate(d.x,d.y);ctx.rotate(.4);rect(-d.r,-d.r,d.r*2,d.r*1.6,1,'#f2e4bd','#a99777');ctx.restore();}
+  else if(d.kind===2){path(c=>{c.moveTo(d.x-d.r,d.y);c.lineTo(d.x+d.r,d.y-d.r);c.lineTo(d.x+2,d.y+d.r);c.closePath()},'#ac9270',null);}
+  else circle(d.x,d.y,d.r,'#9e8a6d');
+ }
+ const p=state.broom;ctx.save();ctx.translate(p.x,p.y);ctx.rotate(-.22);
+ rect(-6,-176,13,166,5,shade(-176,166,'#cfad76','#a47f4b'),'#8c6e48');rect(-10,-188,21,32,8,'#799368','#527152');
+ path(c=>{c.moveTo(-39,-9);c.lineTo(39,-9);c.lineTo(57,31);c.quadraticCurveTo(0,44,-57,31);c.closePath()},shade(-9,48,'#ebcf87','#c79f56'),'#a88548',2);
+ for(let x=-44;x<=44;x+=8)line(x*.75,2,x,32,'#aa874c',1.5);
+ rect(-44,-19,88,25,7,shade(-19,25,'#e3a18a','#bf7569'),'#9d605b');line(-34,-14,34,-14,'#efc4a1',3);ctx.restore();
+ pill(450,563,state.sweepRounds?'QUEDA UNA ÚLTIMA RAYITA':'JUNTÁ TODO EN LA PALA');text(450,592,'Deslizá para barrer. La pala está a la derecha.',16);
+}
+
 function down(e){
  if(mode==='sheet'){sheetDown(e);return}
  if(!mode||state.finished||state.penalty>0||activePointer!==null)return;
  e.preventDefault();inputType=e.pointerType||'mouse';activePointer=e.pointerId;canvas.setPointerCapture(e.pointerId);
  const p=point(e);pressed=true;origin=p;lastPointer=p;tick=performance.now();state.motion=0;mx=p.x;my=p.y;grabOffset={x:0,y:0};
+ if(mode==='sweep'){state.grabbing=true;grabOffset={x:state.broom.x-p.x,y:state.broom.y-p.y};state.attempts++;}
  if(mode==='leaf'){state.grabbing=true;grabOffset={x:state.tongue.x-p.x,y:state.tongue.y-p.y};state.attempts++;}
  if(mode==='bomb')bombAction(bombTouch(p));
  if(mode==='tape'){const tip=tapeGeometry().tip;if(distance(p,tip)<touchRadius(22,37)){state.grabbing=true;state.tapeGrip=0;state.peelStart=state.peel;state.peelSpan=Math.max(80,Math.min(200,W-p.x-28));mx=tip.x;my=tip.y;grabOffset={x:tip.x-p.x,y:tip.y-p.y};setQuote('“La agarraste. Tirones cortos, sin apurarte.”')}else failure('“Eso no era la punta.”')}
@@ -206,6 +254,7 @@ function move(e){
  }
  if(mode==='needle')moveThread(p,dt,speed,now);
  if(mode==='leaf')moveTongue(p,speed);
+ if(mode==='sweep')moveBroom(p);
 }
 function updateWood(){
  state.progress=clamp(state.tightness,0,1);
@@ -231,6 +280,7 @@ function almostThere(){
  if(mode==='bomb')return state.bombPending>0;
  if(mode==='sheet')return state.fitted.every(Boolean)&&state.sheetHold>.65;
  if(!pressed||!state.grabbing)return false;
+ if(mode==='sweep')return state.progress>.78;
  if(mode==='tape')return state.peel>.65;
  if(mode==='usb')return state.usbCables.filter(c=>c.connected).length===2&&state.dockHold>.35;
  if(mode==='screw')return state.tightness>.85;
@@ -244,6 +294,7 @@ function sneezeImpact(){
  if(mode==='sheet'){for(const key of sheetKeys)sneezeBlockedKeys.add(key);sheetPointers.clear();sheetKeys.clear();state.fitted=[false,false,false,false];state.sheetHold=0;}
  pressed=false;activePointer=null;state.grabbing=false;state.dockHold=0;state.tapeGrip=0;state.motion=0;state.fail++;state.attempts++;state.penalty=.65;
  for(const id of ids)if(canvas.hasPointerCapture?.(id))canvas.releasePointerCapture(id);
+ if(mode==='sweep'){state.dust.push(...floorDust(8));state.dustCollected=Math.max(0,state.dustCollected-8);state.progress=Math.min(.99,state.dustCollected/18);}
  if(mode==='tape'){state.peel=Math.max(0,state.peel-.48);state.progress=state.peel;}
  if(mode==='usb'){const c=cable();if(c){if(c.connected){c.connected=false;state.usbPorts[c.port].occupiedBy=null;}c.position={...c.home};}state.progress=state.usbCables.filter(c=>c.connected).length/3;}
  if(mode==='needle'){state.thread={x:175,y:350};state.threadStage='approach';state.threadInsertion=0;state.progress=0;}
@@ -307,7 +358,7 @@ function scene(){
  // Flat vector work surface, with generous space around the contact points.
  rect(35,74,830,542,28,'#c9bb9766');rect(35,65,830,542,26,shade(65,542,'#fff8e6','#f3e8cd'),'#e0cfaa');
  line(65,67,835,67,'#fffdf3',3);
- if(mode==='tape')drawTape();if(mode==='usb')drawUSB();if(mode==='sheet')drawSheet();if(mode==='screw')drawScrew();if(mode==='needle')drawNeedle();if(mode==='leaf')drawLeaf();if(mode==='bomb')drawBomb();
+ if(mode==='tape')drawTape();if(mode==='usb')drawUSB();if(mode==='sheet')drawSheet();if(mode==='screw')drawScrew();if(mode==='needle')drawNeedle();if(mode==='leaf')drawLeaf();if(mode==='bomb')drawBomb();if(mode==='sweep')drawSweep();
  if(state.penalty>0){rect(280,77,340,36,18,'#f5e0d0');text(450,101,mode==='tape'?'La cinta se soltó. Volvé a la pestaña.':mode==='leaf'?'Se escapó la hojita. Probá más suave.':'Volvé a intentar, despacio.',14,'#9a4d32')}
  Sneeze.draw(ctx,state.sneeze,W,H);
  ctx.restore();
