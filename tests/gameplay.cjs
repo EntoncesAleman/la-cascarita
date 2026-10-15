@@ -90,15 +90,18 @@ test('screw only wins when released at the right tightness',()=>{
  for(let i=1;i<=10;i++){h.setTime(h.time+40);h.fire('pointermove',450+70*Math.cos(i*.1),330+70*Math.sin(i*.1));}
  assert(h.run('state.tightness>=screwLimits.ready'));assert(!h.run('state.finished'));h.fire('pointerup',520,330);assert.equal(h.run('state.outcome'),'won');
 });
-test('too much rotation cracks then breaks wood; releasing cannot turn a break into a win',()=>{
- const h=setup();h.run("init('screw');state.tightness=1.07");h.fire('pointerdown',520,330);
- for(let i=1;i<=65&&!h.run('state.finished');i++){h.setTime(h.time+40);h.fire('pointermove',450+70*Math.cos(i*.1),330+70*Math.sin(i*.1));if(i===10){assert(h.run('state.woodDamage>0'));assert(!h.run('state.finished'));}}
- assert(h.run('state.woodBroken'));assert.equal(h.run('state.outcome'),'broken');h.fire('pointerup',520,330);assert.equal(h.run('state.outcome'),'broken');h.run("init('screw')");assert.equal(h.run('state.woodDamage'),0);assert(!h.run('state.woodBroken'));
+test('crossing the green upper edge immediately loses and resets both screw bars',()=>{
+ const h=setup();h.run("init('screw');state.tightness=1.079;updateWood()");h.fire('pointerdown',520,330);h.setTime(h.time+40);h.fire('pointermove',450+70*Math.cos(.1),330+70*Math.sin(.1));
+ assert.equal(h.run('state.outcome'),'broken');assert(h.run('state.woodBroken'));assert.equal(h.run('state.tightness'),0);assert.equal(h.run('state.progress'),0);assert(!h.run('pressed'));assert.equal(h.run('activePointer'),null);
+ h.fire('pointerup',520,330);h.run('updateWood()');assert.equal(h.run('state.outcome'),'broken');assert.equal(h.run('state.progress'),0);h.els.again.onclick();assert.equal(h.run('state.woodDamage'),0);assert(!h.run('state.woodBroken'));assert.equal(h.run('state.tightness'),0);
 });
-test('backing off does not heal cracks, and cancelled contact never wins',()=>{
- const h=setup();h.run("init('screw');state.tightness=1.16;updateWood()");const damage=h.run('state.woodDamage');h.fire('pointerdown',520,330);
- for(let i=1;i<=25;i++){h.setTime(h.time+40);h.fire('pointermove',450+70*Math.cos(-i*.1),330+70*Math.sin(-i*.1));}
- assert(h.run('state.tightness<1.08'));assert.equal(h.run('state.woodDamage'),damage);h.fire('pointercancel',520,330);assert(!h.run('state.finished'));
+test('screw slip resets accumulated tightening and cancellation cannot count as victory',()=>{
+ const h=setup();h.run("init('screw');state.tightness=.8;updateWood()");h.fire('pointerdown',520,330);h.setTime(h.time+16);h.fire('pointermove',450,400);assert(h.run('state.fail')>0);assert.equal(h.run('state.progress'),0);assert.equal(h.run('state.tightness'),0);assert.equal(h.run('state.angle'),null);assert(!h.run('state.finished'));
+ h.fire('pointerup',450,400);h.step(.5);h.run('state.tightness=1.0;updateWood()');h.fire('pointerdown',520,330);h.fire('pointercancel',520,330);assert(!h.run('state.finished'));
+});
+test('the final point of the green zone is safe but any value beyond it loses',()=>{
+ const h=setup();h.run("init('screw');state.tightness=screwLimits.over;updateWood()");assert(!h.run('state.finished'));h.fire('pointerdown',520,330);h.fire('pointerup',520,330);assert.equal(h.run('state.outcome'),'won');
+ h.run("init('screw');state.tightness=screwLimits.over+.00001;updateWood()");assert.equal(h.run('state.outcome'),'broken');assert.equal(h.run('state.progress'),0);
 });
 test('thread pickup works anywhere without moving or losing the tip',()=>{
  const h=setup();h.run("init('needle')");assert(h.fire('pointerdown',430,490));assert(h.run('state.grabbing'));assert.equal(h.run('state.fail'),0);assert.equal(h.run('state.thread.x'),175);

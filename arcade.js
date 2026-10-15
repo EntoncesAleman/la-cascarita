@@ -9,12 +9,12 @@ const defs={
  tape:{title:'Encontrá la punta.',label:'UN ROLLO. NADA MÁS.',instructions:'Agarrá la pestaña y hacé tirones cortos hacia la derecha. Podés soltar y volver a agarrar para seguir. Si tirás de golpe o te desviás, se corta.',quote:'“Seguro está por acá.”',meter:'CINTA DESPEGADA'},
  usb:{title:'Del otro lado.',label:'TRES CABLES. TRES PUERTOS.',instructions:'Conectá los tres cables. Elegí uno, giralo si hace falta y probá los puertos. Sus colores no garantizan que sean compatibles. Sostené cada conector alineado para enchufarlo.',quote:'“Probá del otro lado.”',meter:'CABLES CONECTADOS'},
  sheet:{title:'La sábana ajustable.',label:'UNA SÁBANA. CUATRO ESQUINAS.',instructions:'Poné un dedo en cada esquina y mantené los cuatro a la vez durante un momento. Si soltás uno, se escapa esa esquina. En computadora, mantené A, S, K y L simultáneamente.',quote:'“La primera ya estaba puesta.”',meter:'CUATRO ESQUINAS A LA VEZ'},
- screw:{title:'Una vueltita más.',label:'UN TORNILLO. UNA VUELTA MÁS.',instructions:'Presioná y dibujá círculos alrededor de la cabeza del tornillo, despacio y en sentido horario. Soltá al llegar al punto justo. Si seguís girando, la madera se agrieta y se parte. Girar hacia atrás afloja el tornillo, pero no repara las grietas.',quote:'“Le falta apenas una vueltita.”',meter:'ROSCA AJUSTADA'},
+ screw:{title:'Una vueltita más.',label:'UN TORNILLO. UNA VUELTA MÁS.',instructions:'Presioná y dibujá círculos alrededor de la cabeza del tornillo, despacio y en sentido horario. Soltá al llegar al punto justo. Si pasás el final de la zona verde, perdés y se parte la madera. Si patinás, la barra vuelve al principio.',quote:'“Le falta apenas una vueltita.”',meter:'ROSCA AJUSTADA'},
  needle:{title:'Enhebrá eso.',label:'UN HILO. UNA AGUJA.',instructions:'Arrastrá desde cualquier parte para mover el hilo. La aguja se mueve: alineá la punta con su ojo y atravesalo de izquierda a derecha. No alcanza con apoyarla. Humedecer la punta ayuda.',quote:'“Con buena luz sería fácil.”',meter:'PUNTA ENHEBRADA'}
 };
 let mode=null,state=null,pressed=false,origin=null,lastPointer=null,tick=0,lastFrame=0;
 let mx=190,my=310;const W=900,H=660;
-const screwLimits={ready:.96,over:1.08,break:1.26};
+const screwLimits={ready:.96,over:1.08,scale:1.26};
 let activePointer=null,inputType='mouse',grabOffset={x:0,y:0};
 const corners=[{x:210,y:208},{x:685,y:208},{x:685,y:462},{x:210,y:462}];
 function clamp(x,a,b){return Math.max(a,Math.min(b,x))}
@@ -84,7 +84,7 @@ function failure(msg){
  if(mode==='tape'){state.peel=Math.max(0,state.peel-.17);state.progress=state.peel}
  if(mode==='usb'){const c=cable();if(c&&!c.connected)c.position={...c.home};}
  if(mode==='needle'){state.thread={x:175,y:350};state.heat=Math.min(1,state.heat+.12)}
- if(mode==='screw')state.stripped=clamp(state.stripped+.22,0,1);
+ if(mode==='screw'){state.stripped=clamp(state.stripped+.22,0,1);state.tightness=0;state.progress=0;state.angle=null;state.screwHint='loose';}
  if(mode==='sheet')state.heat=clamp(state.heat+.18,0,1);
 }
 function win(){
@@ -407,15 +407,18 @@ function move(e){
  if(mode==='sushi')moveSushi(p,speed);
 }
 function updateWood(){
+ if(state.finished)return;
+ if(state.tightness>screwLimits.over){breakWood();return}
  state.progress=clamp(state.tightness,0,1);
- state.woodDamage=Math.max(state.woodDamage,clamp((state.tightness-screwLimits.over)/(screwLimits.break-screwLimits.over),0,1));
- if(state.woodDamage>=1){breakWood();return}
- const hint=state.tightness>screwLimits.over?'over':state.tightness>=screwLimits.ready?'ready':'loose';
- if(hint!==state.screwHint){state.screwHint=hint;setQuote(hint==='ready'?'“Ya está. Soltá. No le des otra vuelta.”':hint==='over'?'“Está crujiendo. Aflojá un poco.”':'“Todavía le falta un poquito.”')}
+ const hint=state.tightness>=screwLimits.ready?'ready':'loose';
+ if(hint!==state.screwHint){state.screwHint=hint;setQuote(hint==='ready'?'“Ya está. Soltá. No le des otra vuelta.”':'“Todavía le falta un poquito.”')}
 }
 function breakWood(){
- if(state.finished)return;state.woodBroken=true;state.woodDamage=1;state.finished=true;state.outcome='broken';state.grabbing=false;state.fail++;state.attempts++;
- $('overlay-title').textContent='La madera se partió.';$('overlay-text').textContent='Una vueltita de más. La próxima, soltá el tornillo al llegar a la zona verde.';$('again').textContent='Cambiar la tabla →';$('overlay').classList.add('on');setQuote('“El tornillo aguantó. La madera, no.”');
+ if(state.finished)return;
+ const id=activePointer;state.woodBroken=true;state.woodDamage=1;state.finished=true;state.outcome='broken';state.grabbing=false;state.fail++;state.attempts++;
+ state.tightness=0;state.progress=0;state.angle=null;state.screwHint='broken';pressed=false;activePointer=null;
+ if(id!==null&&canvas.hasPointerCapture?.(id))canvas.releasePointerCapture(id);
+ $('overlay-title').textContent='Te pasaste de lo verde.';$('overlay-text').textContent='La madera se partió. La barra vuelve al principio: soltá dentro de la zona verde en el próximo intento.';$('again').textContent='Cambiar la tabla →';$('overlay').classList.add('on');setQuote('“Era soltar ahí. Justo ahí.”');syncActions();
 }
 function up(e){
  if(mode==='sheet'){sheetUp(e);return}
@@ -640,9 +643,9 @@ function drawScrew(){
  rect(119,-23,117,46,11,'#3e5e45','#2f4935');rect(143,-29,72,58,12,shade(-29,58,'#b2cb79','#719655'),'#3e5e45');[152,170,188,206].forEach(x=>line(x,-19,x,19,'#9caf89',3));ctx.restore();
  ctx.save();ctx.setLineDash([5,8]);ctx.beginPath();ctx.arc(450,330,101,-2.5,-.7);ctx.strokeStyle='#b16c47';ctx.lineWidth=2;ctx.stroke();ctx.restore();
  let ax=450+Math.cos(-.7)*101,ay=330+Math.sin(-.7)*101;arrow(ax-9,ay-12,ax,ay,'#b16c47');
- const gx=290,gy=465,gw=320;rect(gx,gy,gw,10,5,'#c29d67');rect(gx+gw*screwLimits.ready/screwLimits.break,gy,gw*(screwLimits.over-screwLimits.ready)/screwLimits.break,10,3,'#7d9e62');
- const marker=gx+gw*Math.min(1,state.tightness/screwLimits.break);line(marker,gy-6,marker,gy+16,state.woodDamage>0?'#a55338':'#fff9e8',3);text(450,503,'PUNTO JUSTO: ZONA VERDE',12);
- pill(450,567,state.woodBroken?'LA MADERA SE PARTIÓ':state.screwHint==='ready'?'YA ESTÁ AJUSTADO · SOLTÁ':state.screwHint==='over'?'ESTÁ CEDIENDO · AFLOJÁ':'GIRÁ DESPACIO Y MIRÁ LA TENSIÓN');text(450,595,state.woodDamage>0?'La madera tiene grietas. Girar de más la parte.':'Soltá en la zona verde para terminar.',15,state.woodDamage>0?'#a85337':'#5d6759');
+ const gx=290,gy=465,gw=320;rect(gx,gy,gw,10,5,'#c29d67');rect(gx+gw*screwLimits.ready/screwLimits.scale,gy,gw*(screwLimits.over-screwLimits.ready)/screwLimits.scale,10,3,'#7d9e62');
+ const marker=gx+gw*Math.min(1,state.tightness/screwLimits.scale);line(marker,gy-6,marker,gy+16,state.woodDamage>0?'#a55338':'#fff9e8',3);text(450,503,'PUNTO JUSTO: ZONA VERDE',12);
+ pill(450,567,state.woodBroken?'LA MADERA SE PARTIÓ':state.screwHint==='ready'?'YA ESTÁ AJUSTADO · SOLTÁ':'GIRÁ DESPACIO Y MIRÁ LA TENSIÓN');text(450,595,state.woodBroken?'Te pasaste. La barra volvió al principio.':'Pasarte del verde hace perder. Soltá dentro de la zona.',15,state.woodDamage>0?'#a85337':'#5d6759');
 }
 function drawNeedle(){
  const wet=performance.now()<state.wetUntil,eye=needleEye(),p=state.thread;
