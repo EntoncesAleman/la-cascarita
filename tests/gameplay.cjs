@@ -257,3 +257,12 @@ test('nearing victory cannot trigger a sneeze before five minutes',()=>{
  }
  assert.equal(h.run('waitState.count'),1);
 });
+
+test('red notices remain readable for four seconds without extending input penalties',()=>{
+ const h=setup();h.run("init('leaf');slipLeaf()");assert.equal(h.run('state.noticeTime'),4);
+ h.step(.3);assert.equal(h.run('state.penalty'),0);assert(h.run('state.noticeTime')>3.6);
+ h.fire('pointerdown',450,425);assert(h.run('state.grabbing'));h.fire('pointerup',450,425);
+ h.step(3.6);assert(h.run('state.noticeTime')>0);h.step(.2);assert.equal(h.run('state.noticeTime'),0);
+ h.run('slipLeaf()');h.step(2);h.run('slipLeaf()');assert.equal(h.run('state.noticeTime'),4);
+ h.run("init('leaf')");assert.equal(h.run('state.noticeTime'),0);
+});
