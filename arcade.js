@@ -1,6 +1,7 @@
 'use strict';
 const $=id=>document.getElementById(id),canvas=$('scene'),ctx=canvas.getContext('2d');
 const defs={
+ sushi:{title:'Con mucho cuidado.',label:'TRES PIEZAS. DOS PALITOS.',instructions:'Sostené una pieza un instante para tomarla con los palitos. Arrastrala despacio hasta el plato de la derecha y soltá. Si la sacudís, la soltás antes de tiempo o apretás demasiado rato, se desarma.',quote:'“Es solo pasarla de un plato a otro.”',meter:'PIEZAS ENTERAS'},
  sweep:{title:'La última barrida.',label:'UNA ESCOBA. UNA PALA.',instructions:'Arrastrá desde cualquier parte para mover la escoba. Juntá la basura y empujala hacia la boca de la pala, a la derecha. Cuando esté todo junto, levantá la pala.',quote:'“Una última pasada y termino.”',meter:'PISO BARRIDO'},
  leaf:{title:'Un poquito de verde.',label:'UN DIENTE. UNA HOJITA.',instructions:'Arrastrá desde cualquier parte para mover la lengua. Apoyala despacio sobre la hojita hasta despegarla y después bajala sin apurarte. Si la empujás de golpe, vuelve a meterse.',quote:'“Debe ser un poquito de perejil.”',meter:'HOJITA DESPEGADA'},
  bomb:{title:'Un ajuste pendiente.',label:'UN PANEL. UN PEQUEÑO AJUSTE.',instructions:'Revisá el panel. Podés tocar sus cables, el botón o el selector, consultar las instrucciones o validar el estado. El reloj está corriendo.',quote:'“Parece bastante claro.”',meter:'VERIFICACIÓN'},
@@ -23,9 +24,9 @@ function init(m){
  document.body.classList.add('is-playing');mode=m;sheetPointers.clear();sheetKeys.clear();sneezeBlockedKeys.clear();activePointer=null;pressed=false;origin=null;lastPointer=null;tick=0;mx=190;my=310;
  state={attempts:0,elapsed:0,started:performance.now(),finished:false,progress:0,heat:0,fail:0,grabbing:false,penalty:0,tipAngle:rand(-1.8,1.8),peel:0,rotation:0,position:{x:170,y:330},fitted:[false,false,false,false],stripped:0,angle:null,thread:{x:175,y:350},wetUntil:0,threadHold:0,needleWobble:0,motion:0,peelStart:0,peelSpan:200,tapeGrip:0,dockHold:0,socketFace:Math.floor(rand(0,2)),cornerIndex:null,cornerHold:0,lastCorner:null,sheetHold:0,threadStage:'approach',threadInsertion:0,tightness:0,woodDamage:0,woodBroken:false,outcome:null,screwHint:'loose',tongue:{x:450,y:425},leaf:{x:494,y:267},leafLoosen:0,leafAttached:false,bombRemaining:45,bombPending:0,bombChoice:null,bombMessage:'Panel en espera',sneeze:Sneeze.create(),broom:{x:280,y:430},dust:[],dustCollected:0,sweepRounds:0};
  if(m==='sweep')state.dust=floorDust();
- if(m==='usb')createUSB();
- $('hero').style.display='none';$('catalog').style.display='none';$('arcade').classList.add('visible');$('game-title').textContent=defs[m].title.toUpperCase();$('game-subtitle').textContent='Dificultad estimada: baja';$('input-help').textContent={sweep:'Barré hacia la pala de la derecha. Después, levantala.',leaf:'Deslizá para mover la lengua. Despegá la hojita y bajala despacio.',bomb:'Revisá el panel y elegí un ajuste. Todavía hay tiempo.',tape:'Sostené la pestaña un instante. Tirones cortos a la derecha; soltá y repetí.',usb:'Conectá los tres cables. Probá puertos: los colores pueden engañar.',sheet:'Un dedo en cada esquina: sostené los cuatro a la vez. En compu: A + S + K + L.',screw:'Girá despacio y soltá en el punto justo. Una vuelta de más puede partir la madera.',needle:'Mové el hilo desde cualquier parte. Atravesá el ojo de izquierda a derecha.'}[m];
- $('task-image').src='assets/'+m+(['leaf','bomb','sweep'].includes(m)?'.svg':'-960.webp');$('task-image').alt=defs[m].title;$('task-caption').textContent=defs[m].title;
+ if(m==='usb')createUSB();if(m==='sushi')createSushi();
+ $('hero').style.display='none';$('catalog').style.display='none';$('arcade').classList.add('visible');$('game-title').textContent=defs[m].title.toUpperCase();$('game-subtitle').textContent='Dificultad estimada: baja';$('input-help').textContent={sushi:'Sostené para agarrar, llevá despacio y soltá sobre el plato. No aprietes de más.',sweep:'Barré hacia la pala de la derecha. Después, levantala.',leaf:'Deslizá para mover la lengua. Despegá la hojita y bajala despacio.',bomb:'Revisá el panel y elegí un ajuste. Todavía hay tiempo.',tape:'Sostené la pestaña un instante. Tirones cortos a la derecha; soltá y repetí.',usb:'Conectá los tres cables. Probá puertos: los colores pueden engañar.',sheet:'Un dedo en cada esquina: sostené los cuatro a la vez. En compu: A + S + K + L.',screw:'Girá despacio y soltá en el punto justo. Una vuelta de más puede partir la madera.',needle:'Mové el hilo desde cualquier parte. Atravesá el ojo de izquierda a derecha.'}[m];
+ $('task-image').src='assets/'+m+(['leaf','bomb','sweep','sushi'].includes(m)?'.svg':'-960.webp');$('task-image').alt=defs[m].title;$('task-caption').textContent=defs[m].title;
  $('canvas-label').textContent=defs[m].label;$('instructions').textContent=defs[m].instructions;$('meter-label').textContent=defs[m].meter;
  $('overlay').classList.remove('on');setQuote(defs[m].quote);actions();location.hash=m;
  window.scrollTo({top:0,behavior:'smooth'});
@@ -203,11 +204,49 @@ function drawSweep(){
  pill(450,563,state.sweepRounds?'QUEDA UNA ÚLTIMA RAYITA':'JUNTÁ TODO EN LA PALA');text(450,592,'Deslizá para barrer. La pala está a la derecha.',16);
 }
 
+function createSushi(){
+ state.sushiPieces=['nigiri','maki','tamago'].map((kind,i)=>({id:i,kind,home:{x:237,y:245+i*108},position:{x:237,y:245+i*108},delivered:false,broken:false,limit:165-i*15}));
+ state.sushiActive=0;state.sushiHeld=false;state.sushiGrip=0;state.sushiPressure=0;state.sushiRecover=0;state.sushiDebris=[];
+}
+function sushiPiece(){return state.sushiPieces[state.sushiActive]}
+function onSushiPlate(p){return Math.hypot((p.x-680)/103,(p.y-350)/127)<1}
+function crumbleSushi(count=true){
+ const c=sushiPiece();if(!c||c.delivered||c.broken)return;
+ c.broken=true;state.sushiHeld=false;state.sushiGrip=0;state.sushiPressure=0;state.grabbing=false;state.penalty=.85;state.sushiRecover=.85;
+ state.sushiDebris=Array.from({length:16},(_,i)=>({x:c.position.x+Math.cos(i*2.4)*(19+i*2),y:c.position.y+Math.sin(i*2.4)*(15+i*1.8),color:i%5===0?'#df956e':'#fff5d9'}));
+ if(count){state.fail++;state.attempts++;}state.progress=state.sushiPieces.filter(c=>c.delivered).length/3;setQuote('“Se desarmó. Eran palitos, no una prensa.”');
+}
+function moveSushi(p,speed){
+ const c=sushiPiece();if(!c||c.broken||c.delivered)return;
+ if(!state.sushiHeld){if(distance(p,c.position)>touchRadius(8,18))crumbleSushi();return}
+ c.position={x:clamp(p.x,130,785),y:clamp(p.y,170,520)};
+ if(speed>c.limit)crumbleSushi();
+}
+function releaseSushi(e){
+ if(!state||state.finished)return;
+ const c=sushiPiece();if(!c)return;
+ if(state.sushiHeld){
+  state.sushiHeld=false;
+  if(e?.type==='pointerup'&&onSushiPlate(c.position)){
+   c.delivered=true;c.position=[{x:635,y:270},{x:710,y:350},{x:635,y:430}][c.id];state.sushiPressure=0;state.sushiGrip=0;
+   state.progress=state.sushiPieces.filter(p=>p.delivered).length/3;setQuote('“Una pieza entera. Seguimos.”');if(state.sushiPieces.every(p=>p.delivered))win();
+  }else crumbleSushi();
+ }else{state.sushiGrip=0;state.sushiPressure=0;}
+}
+function advanceSushi(dt){
+ if(state.sushiRecover>0){state.sushiRecover=Math.max(0,state.sushiRecover-dt);if(state.sushiRecover===0){for(const c of state.sushiPieces)if(c.broken){c.broken=false;c.position={...c.home};}state.sushiDebris=[];}return}
+ if(!pressed||!state.grabbing||state.penalty>0)return;
+ const c=sushiPiece();if(!c||c.delivered)return;
+ if(!state.sushiHeld){state.sushiGrip+=dt;state.sushiPressure=Math.min(.42,state.sushiGrip/.38*.42);if(state.sushiGrip>=.38){state.sushiHeld=true;setQuote('“La tenés. Sin apretar tanto. Al plato.”');}}
+ else{state.sushiPressure+=dt*(state.motion<20?.16:.03);if(state.sushiPressure>=.96)crumbleSushi();}
+}
+
 function down(e){
  if(mode==='sheet'){sheetDown(e);return}
  if(!mode||state.finished||state.penalty>0||activePointer!==null)return;
  e.preventDefault();inputType=e.pointerType||'mouse';activePointer=e.pointerId;canvas.setPointerCapture(e.pointerId);
  const p=point(e);pressed=true;origin=p;lastPointer=p;tick=performance.now();state.motion=0;mx=p.x;my=p.y;grabOffset={x:0,y:0};
+ if(mode==='sushi'){const pieces=state.sushiPieces.filter(c=>!c.delivered&&!c.broken).sort((a,b)=>distance(p,a.position)-distance(p,b.position)),c=pieces[0];if(c&&distance(p,c.position)<touchRadius(23,60)){state.sushiActive=c.id;state.grabbing=true;state.sushiGrip=0;state.sushiPressure=0;grabOffset={x:c.position.x-p.x,y:c.position.y-p.y};setQuote('“Cerrá los palitos despacio…”')}else setQuote('“Elegí una de las piezas de la tabla.”');}
  if(mode==='sweep'){state.grabbing=true;grabOffset={x:state.broom.x-p.x,y:state.broom.y-p.y};state.attempts++;}
  if(mode==='leaf'){state.grabbing=true;grabOffset={x:state.tongue.x-p.x,y:state.tongue.y-p.y};state.attempts++;}
  if(mode==='bomb')bombAction(bombTouch(p));
@@ -255,6 +294,7 @@ function move(e){
  if(mode==='needle')moveThread(p,dt,speed,now);
  if(mode==='leaf')moveTongue(p,speed);
  if(mode==='sweep')moveBroom(p);
+ if(mode==='sushi')moveSushi(p,speed);
 }
 function updateWood(){
  state.progress=clamp(state.tightness,0,1);
@@ -273,6 +313,7 @@ function up(e){
  const finish=mode==='screw'&&state&&!state.finished&&pressed&&state.grabbing&&e&&e.type==='pointerup'&&state.tightness>=screwLimits.ready&&state.tightness<=screwLimits.over;
  pressed=false;activePointer=null;
  if(state){state.grabbing=false;state.cornerHold=0;state.cornerIndex=null;state.threadHold=0;state.dockHold=0;state.tapeGrip=0}
+ if(mode==='sushi')releaseSushi(e);
  if(finish)win();
 }
 function almostThere(){
@@ -280,6 +321,7 @@ function almostThere(){
  if(mode==='bomb')return state.bombPending>0;
  if(mode==='sheet')return state.fitted.every(Boolean)&&state.sheetHold>.65;
  if(!pressed||!state.grabbing)return false;
+ if(mode==='sushi')return state.sushiHeld&&sushiPiece().position.x>490;
  if(mode==='sweep')return state.progress>.78;
  if(mode==='tape')return state.peel>.65;
  if(mode==='usb')return state.usbCables.filter(c=>c.connected).length===2&&state.dockHold>.35;
@@ -295,6 +337,7 @@ function sneezeImpact(){
  pressed=false;activePointer=null;state.grabbing=false;state.dockHold=0;state.tapeGrip=0;state.motion=0;state.fail++;state.attempts++;state.penalty=.65;
  for(const id of ids)if(canvas.hasPointerCapture?.(id))canvas.releasePointerCapture(id);
  if(mode==='sweep'){state.dust.push(...floorDust(8));state.dustCollected=Math.max(0,state.dustCollected-8);state.progress=Math.min(.99,state.dustCollected/18);}
+ if(mode==='sushi'){const c=sushiPiece();if(c.delivered)c.delivered=false;crumbleSushi(false);}
  if(mode==='tape'){state.peel=Math.max(0,state.peel-.48);state.progress=state.peel;}
  if(mode==='usb'){const c=cable();if(c){if(c.connected){c.connected=false;state.usbPorts[c.port].occupiedBy=null;}c.position={...c.home};}state.progress=state.usbCables.filter(c=>c.connected).length/3;}
  if(mode==='needle'){state.thread={x:175,y:350};state.threadStage='approach';state.threadInsertion=0;state.progress=0;}
@@ -311,6 +354,7 @@ function advance(dt,now){
  if(state.finished)return;
  state.elapsed=(now-state.started)/1000;state.penalty=Math.max(0,state.penalty-dt);state.heat=Math.max(0,state.heat-dt*.045);
  if(now-tick>100)state.motion=0;
+ if(mode==='sushi'){advanceSushi(dt);return}
  if(mode==='bomb'){
  if(state.bombPending>0){state.bombPending=Math.max(0,state.bombPending-dt);state.progress=.82+(1-state.bombPending/1.45)*.16;if(state.bombPending===0)explodeBomb();}
  else{state.bombRemaining=Math.max(0,state.bombRemaining-dt);if(state.bombRemaining===0)explodeBomb();}return;
@@ -358,8 +402,8 @@ function scene(){
  // Flat vector work surface, with generous space around the contact points.
  rect(35,74,830,542,28,'#c9bb9766');rect(35,65,830,542,26,shade(65,542,'#fff8e6','#f3e8cd'),'#e0cfaa');
  line(65,67,835,67,'#fffdf3',3);
- if(mode==='tape')drawTape();if(mode==='usb')drawUSB();if(mode==='sheet')drawSheet();if(mode==='screw')drawScrew();if(mode==='needle')drawNeedle();if(mode==='leaf')drawLeaf();if(mode==='bomb')drawBomb();if(mode==='sweep')drawSweep();
- if(state.penalty>0){rect(280,77,340,36,18,'#f5e0d0');text(450,101,mode==='tape'?'La cinta se soltó. Volvé a la pestaña.':mode==='leaf'?'Se escapó la hojita. Probá más suave.':'Volvé a intentar, despacio.',14,'#9a4d32')}
+ if(mode==='tape')drawTape();if(mode==='usb')drawUSB();if(mode==='sheet')drawSheet();if(mode==='screw')drawScrew();if(mode==='needle')drawNeedle();if(mode==='leaf')drawLeaf();if(mode==='bomb')drawBomb();if(mode==='sweep')drawSweep();if(mode==='sushi')drawSushi();
+ if(state.penalty>0){rect(280,77,340,36,18,'#f5e0d0');text(450,101,mode==='tape'?'La cinta se soltó. Volvé a la pestaña.':mode==='leaf'?'Se escapó la hojita. Probá más suave.':mode==='sushi'?'Se desarmó. Probá con otra pieza.':'Volvé a intentar, despacio.',14,'#9a4d32')}
  Sneeze.draw(ctx,state.sneeze,W,H);
  ctx.restore();
 }
@@ -540,6 +584,42 @@ function drawBomb(){
  circle(647,455,35,'#627b68','#d9dcc1',4);circle(647,455,24,'#9eb38e');line(647,455,657,436,'#f5efce',5);
  rect(414,423,135,51,9,'#d8dab9','#82977b');text(481,455,state.bombPending>0?'✓ OK':'REVISAR',16,'#536c50');
  pill(450,557,state.bombPending>0?'SEÑAL ESTABLE · VERIFICANDO':'PANEL EN ESPERA');text(450,590,state.bombPending>0?'Parece que funcionó. Un instante…':'Tocá un elemento o consultá las instrucciones.',16);
+}
+
+function sushiShape(c){
+ const p=c.position;ctx.save();ctx.translate(p.x,p.y);oval(2,23,43,13,'#927c6050');
+ if(c.kind==='maki'){
+  rect(-33,-20,66,54,18,shade(-20,54,'#577563','#2d4c3e'),'#2f4b3b');oval(0,-18,33,24,'#e9e7cd','#3b5b45');oval(0,-18,24,16,'#fff7dc');oval(-7,-18,10,9,'#e99f7a');oval(9,-17,7,8,'#88b16d');
+ }else{
+  rect(-40,-14,80,47,16,shade(-14,47,'#fffcef','#e7dfbd'),'#cabe9c');
+  for(let i=0;i<9;i++)oval(-28+(i%5)*13,-2+Math.floor(i/5)*17,4,2,'#d5cda9');
+  if(c.kind==='nigiri'){
+   path(k=>{k.moveTo(-45,-12);k.quadraticCurveTo(-28,-39,12,-32);k.quadraticCurveTo(42,-34,47,-10);k.lineTo(35,2);k.quadraticCurveTo(-2,-8,-42,3);k.closePath()},shade(-35,40,'#f1b49a','#db8a6a'),'#bf765e',2);
+   for(let x=-24;x<35;x+=17)path(k=>{k.moveTo(x,-28);k.quadraticCurveTo(x-5,-13,x+3,-1)},null,'#ffd7ad',3);
+  }else{
+   rect(-43,-31,86,36,9,shade(-31,36,'#f6d77c','#dcb153'),'#bc9447');rect(-8,-32,16,60,2,'#466650','#35523f');line(-32,-26,31,-26,'#f9e7a0',3);
+  }
+ }
+ ctx.restore();
+}
+function drawSushi(){
+ rect(115,162,263,362,20,'#b49562');rect(110,151,263,362,20,shade(151,362,'#e2c394','#c69e69'),'#a68150');
+ for(let y=184;y<500;y+=57)path(c=>{c.moveTo(128,y);c.quadraticCurveTo(235,y-9,353,y+5)},null,'#c29c69',1.5);
+ oval(680,365,143,174,'#b7ac8a55');oval(675,350,143,174,'#f9f6e8','#d4cdb8');oval(675,350,124,153,'#e9ecdd','#d2d6c0');oval(675,350,115,143,'#f7f5e7');
+ for(const p of [{x:635,y:270},{x:710,y:350},{x:635,y:430}]){ctx.save();ctx.setLineDash([4,6]);oval(p.x,p.y,43,29,'transparent','#c9cfb9');ctx.restore();}
+ for(const c of state.sushiPieces)if(!c.broken)sushiShape(c);
+ for(const d of state.sushiDebris){ctx.save();ctx.translate(d.x,d.y);ctx.rotate(d.x*.17);rect(-4,-2,8,4,2,d.color,'#cdbb99');ctx.restore();}
+ const active=sushiPiece();if(active&&!active.delivered&&!active.broken){
+  const p=active.position,gap=state.sushiHeld?12:28-16*Math.min(1,state.sushiGrip/.38);
+  line(p.x-gap,p.y+8,p.x+112,p.y+127,'#97774f',8);line(p.x-gap-1,p.y+6,p.x+111,p.y+125,'#e6c894',3);
+  line(p.x+gap,p.y+6,p.x+151,p.y+104,'#97774f',8);line(p.x+gap-1,p.y+4,p.x+150,p.y+102,'#e6c894',3);
+  if(state.grabbing&&!state.sushiHeld){ctx.beginPath();ctx.arc(p.x,p.y,52,-Math.PI/2,-Math.PI/2+Math.min(1,state.sushiGrip/.38)*Math.PI*2);ctx.strokeStyle='#739765';ctx.lineWidth=3;ctx.stroke();}
+ }
+ text(242,128,'LA TABLA',12);text(678,144,'SOLTÁ SOBRE EL PLATO',12);
+ const count=state.sushiPieces.filter(c=>c.delivered).length;
+ pill(450,557,state.sushiHeld?(onSushiPlate(active.position)?'SOBRE EL PLATO · SOLTÁ':'SUAVE. QUE NO SE DESARME.'):count+' / 3 PIEZAS ENTERAS');
+ if(state.sushiHeld){rect(324,579,252,6,3,'#dedac3');rect(324,579,252*Math.min(1,state.sushiPressure),6,3,state.sushiPressure>.78?'#bc6f56':'#94a571');text(450,609,'PRESIÓN DE LOS PALITOS',11);}
+ else text(450,592,'Sostené un instante, llevá despacio y soltá en el plato.',15);
 }
 
 function frame(now){

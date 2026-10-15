@@ -156,13 +156,13 @@ test('bomb touch release cannot cancel the explosion and doing nothing also lose
  const h=setup();h.run("init('bomb')");h.fire('pointerdown',310,300);h.fire('pointerup',310,300);h.step(1.5);assert.equal(h.run('state.outcome'),'exploded');
  h.run("init('bomb')");h.step(45.1);assert.equal(h.run('state.outcome'),'exploded');h.run("init('bomb')");assert.equal(h.run('state.bombPending'),0);assert.equal(h.run('state.bombRemaining'),45);assert.equal(h.run('state.outcome'),null);
 });
-test('nine catalog entries link to existing game artwork without revealing the bomb trick',()=>{
- const html=fs.readFileSync(path.join(root,'index.html'),'utf8');assert.equal((html.match(/class="game-card"/g)||[]).length,9);
- for(const mode of ['leaf','bomb','sweep']){assert(html.includes('data-open="'+mode+'"'));assert(fs.existsSync(path.join(root,'assets',mode+'.svg')));}
+test('ten catalog entries link to existing game artwork without revealing the bomb trick',()=>{
+ const html=fs.readFileSync(path.join(root,'index.html'),'utf8');assert.equal((html.match(/class="game-card"/g)||[]).length,10);
+ for(const mode of ['leaf','bomb','sweep','sushi']){assert(html.includes('data-open="'+mode+'"'));assert(fs.existsSync(path.join(root,'assets',mode+'.svg')));}
  const card=html.split('data-open="bomb"')[0].split('<article').pop();assert(!/imposible|sin solución|siempre explota/i.test(card));
 });
-test('random sneeze affects all eight arcade games only near completion',()=>{
- const situations={sweep:'state.progress=.9',tape:'state.peel=.9',usb:'state.usbCables[0].connected=true;state.usbCables[1].connected=true;state.activeCable=2;state.dockHold=.6',sheet:'sheetKeys=new Set([0,1,2,3]);syncSheet();state.sheetHold=1',screw:'state.tightness=.99',needle:"state.threadStage='through'",leaf:'state.leafAttached=true',bomb:"bombAction('check')"};
+test('random sneeze affects all nine arcade games only near completion',()=>{
+ const situations={sushi:'state.sushiHeld=true;sushiPiece().position={x:600,y:350}',sweep:'state.progress=.9',tape:'state.peel=.9',usb:'state.usbCables[0].connected=true;state.usbCables[1].connected=true;state.activeCable=2;state.dockHold=.6',sheet:'sheetKeys=new Set([0,1,2,3]);syncSheet();state.sheetHold=1',screw:'state.tightness=.99',needle:"state.threadStage='through'",leaf:'state.leafAttached=true',bomb:"bombAction('check')"};
  for(const [mode,prepare]of Object.entries(situations)){
   const h=setup();h.run(`init('${mode}');state.sneeze.cooldown=0;state.sneeze.random=()=>0;pressed=true;state.grabbing=true;${prepare}`);h.run(`advance(.016,${h.time})`);assert.equal(h.run('state.sneeze.count'),1,mode);assert(h.run('state.sneeze.cooldown>=9'));assert(!h.run('state.grabbing'));
   if(mode==='tape')assert(h.run('state.peel<.5'));
@@ -207,6 +207,29 @@ test('a last line of dust remains after repeated cleanup and lifting the pan',()
 test('a sneeze scatters collected dust and resetting restores the starting floor',()=>{
  const h=setup();h.run("init('sweep');state.progress=.99;state.dustCollected=18;state.dust=lastDust();pressed=true;state.grabbing=true;state.sneeze.cooldown=0;state.sneeze.random=()=>0;advance(.016,1000)");assert.equal(h.run('state.sneeze.count'),1);assert(h.run('state.dust.length')>3);assert(h.run('state.progress')<.99);assert(!h.run('state.grabbing'));h.run("init('sweep')");assert.equal(h.run('state.dust.length'),18);assert.equal(h.run('state.progress'),0);
 });
+test('sushi grip takes a moment and three gentle deliveries win',()=>{
+ const h=setup();h.run("init('sushi')");
+ for(let id=0;id<3;id++){
+  const home=h.run(`state.sushiPieces[${id}].home`);h.fire('pointerdown',home.x,home.y);h.step(.2);assert(!h.run('state.sushiHeld'));h.step(.2);assert(h.run('state.sushiHeld'));
+  for(let i=1;i<=160;i++){h.setTime(h.time+20);h.fire('pointermove',home.x+(680-home.x)*i/160,home.y+(350-home.y)*i/160);h.run(`advance(.02,${h.time})`);}
+  assert(!h.run('state.finished'));h.fire('pointerup',680,350);assert(h.run(`state.sushiPieces[${id}].delivered`));if(id<2)assert(!h.run('state.finished'));
+ }
+ assert.equal(h.run('state.outcome'),'won');
+});
+test('jerking sushi breaks it and recovery restores only the damaged piece',()=>{
+ const h=setup();h.run("init('sushi');state.sushiPieces[1].delivered=true");h.fire('pointerdown',237,245);h.step(.4);h.setTime(h.time+16);h.fire('pointermove',500,245);assert(h.run('state.sushiPieces[0].broken'));assert(h.run('state.sushiDebris.length>0'));h.fire('pointerup',500,245);h.step(.9);assert(!h.run('state.sushiPieces[0].broken'));assert.equal(h.run('state.sushiPieces[0].position.x'),237);assert(h.run('state.sushiPieces[1].delivered'));
+});
+test('holding chopsticks too long crushes sushi; releasing outside the plate also fails',()=>{
+ const h=setup();h.run("init('sushi')");h.fire('pointerdown',237,245);h.step(3.9);assert(h.run('state.fail')>0);assert(!h.run('state.sushiHeld'));h.fire('pointerup',237,245);h.step(1);
+ h.fire('pointerdown',237,245);h.step(.4);h.fire('pointerup',237,245);assert(h.run('state.sushiPieces[0].broken'));assert(!h.run('state.sushiPieces[0].delivered'));
+});
+test('cancelled touch over the sushi plate does not count as delivery',()=>{
+ const h=setup();h.run("init('sushi')");h.fire('pointerdown',237,245);h.step(.4);h.run('sushiPiece().position={x:680,y:350}');h.fire('pointercancel',680,350);assert(!h.run('sushiPiece().delivered'));assert(h.run('sushiPiece().broken'));
+});
+test('sushi sneeze drops the held piece and can undo a final delivery',()=>{
+ const h=setup();h.run("init('sushi');state.sushiPieces[0].delivered=true;state.sushiPieces[1].delivered=true;state.sushiActive=2;state.sushiHeld=true;sushiPiece().position={x:610,y:350};pressed=true;state.grabbing=true;state.sneeze.cooldown=0;state.sneeze.random=()=>0;advance(.016,1000)");assert.equal(h.run('state.sneeze.count'),1);assert(h.run('sushiPiece().broken'));assert.equal(h.run('state.sushiPieces.filter(c=>c.delivered).length'),2);
+ h.run("init('sushi');for(const c of state.sushiPieces)c.delivered=true;state.sushiActive=2;state.sneeze.cooldown=0;state.sneeze.random=()=>0;win()");assert(!h.run('state.finished'));assert.equal(h.run('state.sushiPieces.filter(c=>c.delivered).length'),2);
+});
 test('all scenes render after interaction and tool changes',()=>{
- const h=setup();for(const mode of ['tape','usb','sheet','screw','needle','leaf','bomb','sweep'])h.run(`init('${mode}');scene()`);const e=setup(true);e.run("reset();draw(.016);tool='spoon';draw(.016);tool='tweezers';draw(.016)");
+ const h=setup();for(const mode of ['tape','usb','sheet','screw','needle','leaf','bomb','sweep','sushi'])h.run(`init('${mode}');scene()`);const e=setup(true);e.run("reset();draw(.016);tool='spoon';draw(.016);tool='tweezers';draw(.016)");
 });
