@@ -164,7 +164,7 @@ test('ten catalog entries link to existing game artwork without revealing the bo
 test('random sneeze affects all nine arcade games only near completion',()=>{
  const situations={sushi:'state.sushiHeld=true;sushiPiece().position={x:600,y:350}',sweep:'state.progress=.9',tape:'state.peel=.9',usb:'state.usbCables[0].connected=true;state.usbCables[1].connected=true;state.activeCable=2;state.dockHold=.6',sheet:'sheetKeys=new Set([0,1,2,3]);syncSheet();state.sheetHold=1',screw:'state.tightness=.99',needle:"state.threadStage='through'",leaf:'state.leafAttached=true',bomb:"bombAction('check')"};
  for(const [mode,prepare]of Object.entries(situations)){
-  const h=setup();h.run(`init('${mode}');state.sneeze.cooldown=0;state.sneeze.random=()=>0;pressed=true;state.grabbing=true;${prepare}`);h.run(`advance(.016,${h.time})`);assert.equal(h.run('state.sneeze.count'),1,mode);assert(h.run('state.sneeze.cooldown>=9'));assert(!h.run('state.grabbing'));
+  const h=setup();h.run(`init('${mode}');state.sneeze.cooldown=0;state.sneeze.random=()=>0;pressed=true;state.grabbing=true;${prepare}`);h.run(`advance(.016,${h.time})`);assert.equal(h.run('state.sneeze.count'),1,mode);assert(h.run('state.sneeze.cooldown>=300&&state.sneeze.cooldown<=420'));assert(!h.run('state.grabbing'));
   if(mode==='tape')assert(h.run('state.peel<.5'));
   if(mode==='usb'){assert.equal(h.run('state.usbCables.filter(c=>c.connected).length'),2);assert.equal(h.run('state.dockHold'),0);}
   if(mode==='sheet'){assert.equal(h.run('sheetKeys.size'),0);assert.equal(h.run('state.fitted.filter(Boolean).length'),0);}
@@ -232,4 +232,28 @@ test('sushi sneeze drops the held piece and can undo a final delivery',()=>{
 });
 test('all scenes render after interaction and tool changes',()=>{
  const h=setup();for(const mode of ['tape','usb','sheet','screw','needle','leaf','bomb','sweep','sushi'])h.run(`init('${mode}');scene()`);const e=setup(true);e.run("reset();draw(.016);tool='spoon';draw(.016);tool='tweezers';draw(.016)");
+});
+
+test('sneeze initial and repeat waits range from five to seven minutes',()=>{
+ const h=setup();
+ for(const [random,seconds] of [[0,300],[.5,360],[1,420]]){
+  h.run(`Sneeze.random=()=>${random};globalThis.waitState=Sneeze.create()`);
+  assert.equal(h.run('waitState.cooldown'),seconds);
+  h.run('Sneeze.fire(waitState)');assert.equal(h.run('waitState.cooldown'),seconds);
+ }
+});
+test('nearing victory cannot trigger a sneeze before five minutes',()=>{
+ const h=setup();h.run('Sneeze.random=()=>0;globalThis.waitState=Sneeze.create()');
+ for(let i=0;i<2999;i++){
+  assert(!h.run('Sneeze.tick(waitState,.1,true)'));
+  assert(!h.run('Sneeze.finish(waitState)'));
+ }
+ assert.equal(h.run('waitState.count'),0);
+ h.run('Sneeze.tick(waitState,.1,true);Sneeze.tick(waitState,.1,true)');
+ assert.equal(h.run('waitState.count'),1);
+ for(let i=0;i<2999;i++){
+  assert(!h.run('Sneeze.tick(waitState,.1,true)'));
+  assert(!h.run('Sneeze.finish(waitState)'));
+ }
+ assert.equal(h.run('waitState.count'),1);
 });
