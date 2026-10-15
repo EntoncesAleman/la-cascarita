@@ -546,23 +546,38 @@ function drawNeedle(){
 }
 
 function drawLeaf(){
- oval(450,345,307,196,'#d09b8066');oval(450,330,304,192,shade(138,384,'#f4b9a0','#db937f'),'#bd7f72');
- oval(450,334,270,153,'#75454d','#ae6d70');oval(450,359,242,114,'#593e47');
- // Rounded teeth frame a friendly, schematic mouth, without a tiny pickup target.
+ // The lips define the opening; teeth and tongue are clipped inside it.
+ oval(450,351,321,198,'#b6836540');
+ oval(450,327,324,211,shade(116,422,'#f4c7a1','#dfa481'));
+ path(c=>{c.moveTo(197,317);c.bezierCurveTo(263,231,339,165,414,180);c.quadraticCurveTo(450,198,486,180);c.bezierCurveTo(561,165,637,231,703,317);c.bezierCurveTo(634,275,560,217,450,211);c.bezierCurveTo(340,217,266,275,197,317);c.closePath()},shade(174,150,'#d48178','#ac5360'),'#ad6061',2);
+ path(c=>{c.moveTo(197,317);c.bezierCurveTo(265,435,338,523,450,526);c.bezierCurveTo(562,523,635,435,703,317);c.bezierCurveTo(644,412,561,482,450,484);c.bezierCurveTo(339,482,256,412,197,317);c.closePath()},shade(317,212,'#b75d69','#ed9c95'),'#b7676a',2);
+ const mouthOpening=()=>{ctx.beginPath();ctx.moveTo(197,317);ctx.bezierCurveTo(270,248,345,211,450,211);ctx.bezierCurveTo(555,211,630,248,703,317);ctx.bezierCurveTo(644,412,561,482,450,484);ctx.bezierCurveTo(339,482,256,412,197,317);ctx.closePath()};
+ mouthOpening();ctx.fillStyle=shade(211,274,'#673842','#351f31');ctx.fill();
+ ctx.save();mouthOpening();ctx.clip();
+ // Gum lines sit behind both rows of teeth, within the dark cavity.
+ oval(450,204,242,54,'#c8777b');oval(450,475,235,45,'#b76974');
  for(let i=0;i<7;i++){
   const x=240+i*64,drop=Math.abs(i-3)*5;
-  rect(x,191+drop,58,101-drop,16,shade(191,101,'#fffdf0','#e2dfc8'),'#ccbaa4');line(x+12,200+drop,x+43,200+drop,'#fffef7',3);
-  rect(x,394-drop,58,78+drop,15,shade(394,78,'#ede7ce','#fff8e6'),'#c6b49b');
+  rect(x,191+drop,58,101-drop,14,shade(191,101,'#fffdf0','#ded7bf'),'#bfb29e');
+  line(x+13,219+drop,x+42,219+drop,'#fffef7',3);
+  // Lower teeth follow the lower jaw, behind the tongue.
+  const rise=Math.abs(i-3)*11;
+  rect(x,424-rise,58,95,14,shade(411,108,'#f9f1dd','#d6c5af'),'#baaa96');
  }
  const p=state.tongue;
- path(c=>{c.moveTo(350,477);c.bezierCurveTo(331,428,p.x-53,p.y+15,p.x-49,p.y);c.bezierCurveTo(p.x-45,p.y-56,p.x+45,p.y-56,p.x+49,p.y);c.bezierCurveTo(p.x+53,p.y+26,572,439,550,477);c.quadraticCurveTo(450,534,350,477);c.closePath()},shade(p.y-44,240,'#f4a3aa','#cf7085'),'#b66578',3);
- path(c=>{c.moveTo(450,488);c.quadraticCurveTo(p.x+6,p.y+80,p.x,p.y-9)},null,'#d17e90',2);
+ path(c=>{c.moveTo(340,486);c.bezierCurveTo(330,436,p.x-58,p.y+30,p.x-49,p.y);c.bezierCurveTo(p.x-45,p.y-56,p.x+45,p.y-56,p.x+49,p.y);c.bezierCurveTo(p.x+58,p.y+30,570,436,560,486);c.quadraticCurveTo(450,529,340,486);c.closePath()},shade(p.y-44,240,'#f3a0aa','#b75978'),'#a4536c',3);
+ path(c=>{c.moveTo(450,495);c.quadraticCurveTo(p.x+6,p.y+80,p.x,p.y-9)},null,'#ce7188',2);
  oval(p.x-16,p.y-21,17,7,'#ffd0ca');
  const leaf=state.leaf;ctx.save();ctx.translate(leaf.x,leaf.y);ctx.rotate(-.4);
  path(c=>{c.moveTo(0,24);c.bezierCurveTo(-31,6,-24,-16,10,-25);c.bezierCurveTo(29,-2,23,17,0,24);c.closePath()},shade(-25,50,'#9fc761','#4f8e4f'),'#3d7346',2);
  line(1,20,8,-19,'#d2e293',2);line(4,2,-11,-7,'#a6c971',1.5);line(6,-7,18,-13,'#a6c971',1.5);ctx.restore();
  if(!state.leafAttached){dotted(leaf.x,leaf.y,30,'#7e9d58');if(state.leafLoosen>0){ctx.beginPath();ctx.arc(leaf.x,leaf.y,36,-Math.PI/2,-Math.PI/2+state.leafLoosen*Math.PI*2);ctx.strokeStyle='#e5c473';ctx.lineWidth=4;ctx.stroke();}}
- else{arrow(683,345,683,462,'#8b9d65');}
+ ctx.restore();
+ // Lip highlights and corner creases make the mouth read as a face.
+ path(c=>{c.moveTo(347,197);c.quadraticCurveTo(382,180,410,191)},null,'#efb1a0',4);
+ path(c=>{c.moveTo(377,506);c.quadraticCurveTo(450,529,523,506)},null,'#f5b6a7',6);
+ path(c=>{c.moveTo(189,304);c.quadraticCurveTo(181,321,194,340);c.moveTo(711,304);c.quadraticCurveTo(719,321,706,340)},null,'#ba7a69',3);
+ if(state.leafAttached){arrow(726,345,726,462,'#8b9d65');}
  pill(450,557,state.leafAttached?'LA TENÉS · BAJÁ LA LENGUA DESPACIO':'UN POQUITO DE VERDE, NADA MÁS');text(450,590,'Deslizá desde cualquier parte para mover la lengua.',16);
 }
 function drawBomb(){
