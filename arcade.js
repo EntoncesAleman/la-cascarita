@@ -80,6 +80,24 @@ function createUSB(){
 }
 function cable(){return state.usbCables[state.activeCable]}
 function socket(index=0,now=performance.now()){const port=state.usbPorts[index];return{x:655,y:port.y+Math.sin(now/1100+index)*8}}
+function usbSignal(c){
+ if(c.connected)return{status:'green',portId:c.port,message:'Conectado.'};
+ const nearest=state.usbPorts.map(port=>({port,target:socket(port.id)})).sort((a,b)=>distance(c.position,a.target)-distance(c.position,b.target))[0];
+ const {port,target}=nearest;
+ if(distance(c.position,target)>105)return{status:'off',portId:null,message:'Acercá el cable a un puerto para ver la señal.'};
+ let message='';
+ if(port.occupiedBy!==null)message='Rojo: ese puerto ya está ocupado.';
+ else if(c.port!==port.id)message='Rojo: probá otro puerto.';
+ else if(c.face!==port.face)message='Rojo: es el puerto. Girá el conector.';
+ else if(Math.abs(c.position.y-target.y)>=touchRadius(4,8))message='Rojo: alineá el conector con el puerto.';
+ else if(state.motion>=95)message='Rojo: movelo más despacio.';
+ return{status:message?'red':'green',portId:port.id,message:message||'Verde: vas bien. Acercá y sostené el cable.'};
+}
+function usbLight(x,y,status){
+ const color={green:'#5fae60',red:'#df6655',off:'#65796d'}[status];
+ if(status!=='off')circle(x,y,12,status==='green'?'#8bce6d44':'#ef826344');
+ circle(x,y,7,color,'#eef2da',1.5);circle(x-2,y-2,2,status==='off'?'#8e9e88':'#fff5d9');
+}
 function dockCable(){
  const c=cable(),port=state.usbPorts[c.port];c.connected=true;c.position={x:655,y:port.y};port.occupiedBy=c.id;
  state.grabbing=false;state.dockHold=0;state.progress=state.usbCables.filter(c=>c.connected).length/3;
@@ -483,11 +501,13 @@ function drawTape(){
 }
 
 function drawUSB(){
+ const active=cable(),signal=usbSignal(active);
  oval(701,541,137,17,'#b8aa8166');rect(612,145,204,391,20,'#92a59566');rect(607,137,204,391,20,shade(137,391,'#e0ebdc','#a8beb0'),'#819e8b');rect(607,137,204,24,12,'#edf4df');
  for(const port of state.usbPorts){
   const color=port.color,y=port.y;rect(627,y-40,164,80,10,shade(y-40,80,color.light,color.base),color.dark);
   rect(643,y-25,108,50,5,'#293e34','#6b8070');const cy=y+(port.face?3:-17);rect(652,cy,89,17,2,'#9daf99');
   [661,681,701,721].forEach(x=>rect(x,cy,8,11,1,'#eed697'));text(774,y+6,String(port.id+1),20,'#fff9e8');
+  const status=port.occupiedBy!==null?'green':signal.portId===port.id?signal.status:'off';usbLight(774,y-25,status);
   if(port.occupiedBy!==null){circle(623,y-33,13,'#65966b','#e9f1d5');text(623,y-28,'✓',15,'#fff9e8');}
  }
  const ordered=state.usbCables.filter(c=>c.id!==state.activeCable).concat(state.usbCables.filter(c=>c.id===state.activeCable));
@@ -498,12 +518,11 @@ function drawUSB(){
   ctx.save();ctx.translate(p.x,p.y);
   rect(-105,-29,95,58,12,shade(-29,58,col.light,col.base),col.dark);line(-91,-20,-25,-20,col.light,3);
   rect(-10,-21,60,42,3,shade(-21,42,'#eef0e4','#aabdb0'),'#6e8778');rect(2,c.face?6:-14,15,8,1,'#526c5b');rect(26,c.face?6:-14,15,8,1,'#526c5b');
-  text(-58,7,c.label,22,'#fff9e9');
+  text(-58,7,c.label,22,'#fff9e9');usbLight(-28,12,c.connected?'green':c.id===state.activeCable?signal.status:'off');
   if(!c.connected&&c.id===state.activeCable)rect(-111,-35,107,70,15,'transparent','#ad7852');ctx.restore();
  }
- const active=cable();
  if(active&&!active.connected&&state.dockHold>0){const port=state.usbPorts[active.port];ctx.beginPath();ctx.arc(697,port.y,56,-Math.PI/2,-Math.PI/2+Math.min(1,state.dockHold/1.1)*Math.PI*2);ctx.strokeStyle='#648c58';ctx.lineWidth=4;ctx.stroke();}
- pill(450,558,state.usbCables.filter(c=>c.connected).length+' / 3 CABLES CONECTADOS');text(450,590,'Elegí un cable. Giralo si hace falta y probá un puerto.',16);
+ pill(450,558,state.usbCables.filter(c=>c.connected).length+' / 3 CABLES CONECTADOS');text(450,590,signal.message,15,signal.status==='red'?'#ad5145':signal.status==='green'?'#4d7e47':'#63775b');
  text(187,151,'CABLES A · B · C',13);text(709,111,'PUERTOS 1 · 2 · 3',13);
 }
 
