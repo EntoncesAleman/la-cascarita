@@ -43,23 +43,66 @@ test('perspective tape still needs a held grip and three strokes inside the canv
  }
  assert(h.run('state.finished'));
 });
-test('USB requires correct face and steady alignment rather than instant contact',()=>{
- const h=setup();h.run("init('usb');state.socketFace=1;state.rotation=0;state.position=socket()");h.fire('pointerdown',681,h.run('state.position.y'));h.setTime(h.time+20);h.fire('pointermove',680,h.run('socket().y'));assert(h.run('state.fail')>0);h.fire('pointerup',680,330);h.step(.5);
- h.run('state.rotation=1;state.position=socket()');h.fire('pointerdown',681,h.run('state.position.y'));h.step(.3);assert(!h.run('state.finished'));
- for(let i=0;i<80&&!h.run('state.finished');i++){h.setTime(h.time+16);h.fire('pointermove',681,h.run('socket().y'));h.run(`advance(.016,${h.time})`);}
- assert(h.run('state.finished'));
+test('USB colors do not determine compatibility; all three distinct cables must connect',()=>{
+ const h=setup();h.run("init('usb')");assert.equal(h.run('new Set(state.usbCables.map(c=>c.port)).size'),3);assert(h.run('state.usbCables.some(c=>c.port!==c.id)'));
+ const wrong=h.run('state.usbCables.find(c=>c.port!==c.id).id');h.run(`state.activeCable=${wrong};cable().position=socket(${wrong});cable().face=state.usbPorts[${wrong}].face`);
+ let pos=h.run('cable().position');h.fire('pointerdown',pos.x,pos.y);h.setTime(h.time+20);h.fire('pointermove',pos.x+.2,pos.y);assert(h.run('state.fail')>0);assert(!h.run('cable().connected'));h.fire('pointerup',pos.x,pos.y);h.step(.5);
+ for(let i=0;i<3;i++){
+  h.run(`state.activeCable=${i};cable().position=socket(cable().port);cable().face=state.usbPorts[cable().port].face`);pos=h.run('cable().position');h.fire('pointerdown',pos.x,pos.y);h.step(.3);assert(!h.run(`state.usbCables[${i}].connected`));
+  for(let n=0;n<100&&!h.run(`state.usbCables[${i}].connected`);n++){h.setTime(h.time+16);pos=h.run(`socket(state.usbCables[${i}].port)`);h.fire('pointermove',pos.x,pos.y);h.run(`advance(.016,${h.time})`);}
+  assert(h.run(`state.usbCables[${i}].connected`));if(i<2)assert(!h.run('state.finished'));h.fire('pointerup',pos.x,pos.y);
+ }
+ assert(h.run('state.finished'));assert.equal(h.run('new Set(state.usbPorts.map(p=>p.occupiedBy)).size'),3);
 });
-test('sheet cannot be won with four taps; holds, diagonals and tension management work',()=>{
- const h=setup();h.run("init('sheet')");for(const [x,y]of [[210,208],[685,208],[685,462],[210,462]]){h.fire('pointerdown',x,y);h.fire('pointerup',x,y);}assert.equal(h.run('state.progress'),0);
- h.fire('pointerdown',210,208);h.step(.75);h.fire('pointerup',210,208);h.fire('pointerdown',685,208);h.step(.75);h.fire('pointerup',685,208);assert.equal(h.run('state.fitted.filter(Boolean).length'),1);
- h.run("init('sheet')");for(const i of [0,2,1,3]){if(i===1||i===3)h.els.loosen.onclick();const v=h.run(`corners[${i}]`);h.fire('pointerdown',v.x,v.y);h.step(.75);h.fire('pointerup',v.x,v.y);}assert(h.run('state.finished'));
+test('USB rejects a wrong face and never assigns an occupied port twice',()=>{
+ const h=setup();h.run("init('usb');state.activeCable=0;cable().position=socket(cable().port);cable().face=1-state.usbPorts[cable().port].face");let p=h.run('cable().position');h.fire('pointerdown',p.x,p.y);h.setTime(h.time+20);h.fire('pointermove',p.x+.2,p.y);assert(h.run('state.fail')>0);assert(!h.run('cable().connected'));h.fire('pointerup',p.x,p.y);h.step(.5);
+ h.els.rotate.onclick();assert(h.run('cable().face===state.usbPorts[cable().port].face'));
+ h.run('state.usbCables[0].connected=true;state.usbPorts[state.usbCables[0].port].occupiedBy=0;state.activeCable=1;cable().position=socket(state.usbCables[0].port)');p=h.run('cable().position');h.fire('pointerdown',p.x,p.y);h.setTime(h.time+20);h.fire('pointermove',p.x+.2,p.y);assert(!h.run('state.usbCables[1].connected'));assert.equal(h.run('state.usbPorts[state.usbCables[0].port].occupiedBy'),0);
+});
+test('sheet needs four independent fingers held simultaneously, not sequential taps',()=>{
+ const h=setup();h.run("init('sheet')");const cs=h.run('corners');
+ for(const v of cs){h.fire('pointerdown',v.x,v.y,1);h.step(.1);h.fire('pointerup',v.x,v.y,1);}assert(!h.run('state.finished'));assert.equal(h.run('state.sheetHold'),0);
+ for(let i=0;i<3;i++)h.fire('pointerdown',cs[i].x,cs[i].y,10+i);
+ h.step(2);assert(!h.run('state.finished'));assert.equal(h.run('state.fitted.filter(Boolean).length'),3);
+ h.fire('pointerdown',cs[3].x,cs[3].y,10);assert.equal(h.run('state.fitted.filter(Boolean).length'),3);
+ h.fire('pointerdown',cs[3].x,cs[3].y,13);h.step(.8);assert(!h.run('state.finished'));
+ h.fire('pointerup',cs[0].x,cs[0].y,10);assert.equal(h.run('state.sheetHold'),0);h.step(1);assert(!h.run('state.finished'));
+ h.fire('pointerdown',cs[0].x,cs[0].y,14);h.step(1.65);assert(h.run('state.finished'));
+});
+test('sheet cancellation and moving one finger away release only its corner',()=>{
+ const h=setup();h.run("init('sheet')");const cs=h.run('corners');for(let i=0;i<4;i++)h.fire('pointerdown',cs[i].x,cs[i].y,20+i);h.step(.4);
+ h.fire('pointermove',450,330,20);assert.equal(h.run('state.fitted.filter(Boolean).length'),3);assert.equal(h.run('state.sheetHold'),0);
+ h.fire('pointermove',cs[0].x,cs[0].y,20);assert.equal(h.run('state.fitted.filter(Boolean).length'),4);
+ h.fire('pointercancel',cs[1].x,cs[1].y,21);assert.equal(h.run('state.fitted.filter(Boolean).length'),3);
+ h.fire('lostpointercapture',cs[2].x,cs[2].y,22);assert.equal(h.run('state.fitted.filter(Boolean).length'),2);
+ h.run("init('sheet')");assert.equal(h.run('sheetPointers.size'),0);assert.equal(h.run('state.fitted.filter(Boolean).length'),0);
+});
+test('desktop sheet requires A S K L held together',()=>{
+ const h=setup();h.run("init('sheet')");for(const key of ['a','s','k'])h.run(`sheetKey({key:'${key}',preventDefault(){}},true)`);h.step(2);assert(!h.run('state.finished'));
+ h.run("sheetKey({key:'l',preventDefault(){}},true)");h.step(1.65);assert(h.run('state.finished'));
 });
 test('screw difficulty depends on angular speed, not pointer-event frequency',()=>{
  const progress=[];for(const hz of [30,120]){const h=setup();h.run("init('screw')");h.fire('pointerdown',520,330);for(let i=1;i<=hz*3;i++){const a=i/hz*3;h.setTime(h.time+1000/hz);h.fire('pointermove',450+70*Math.cos(a),330+70*Math.sin(a));}assert.equal(h.run('state.fail'),0);progress.push(h.run('state.progress'));}assert(Math.abs(progress[0]-progress[1])<.002);
  const h=setup();h.run("init('screw')");h.fire('pointerdown',520,330);h.setTime(h.time+16);h.fire('pointermove',450,400);assert(h.run('state.fail')>0);
 });
-test('needle threading continues while a finger stays still',()=>{
- const h=setup();h.run("init('needle');state.thread={x:660,y:313};state.wetUntil=10000");h.fire('pointerdown',660,313);h.step(.4);assert(!h.run('state.finished'));h.step(.55);assert(h.run('state.finished'));const elapsed=h.run('state.elapsed');h.step(1);assert.equal(h.run('state.elapsed'),elapsed);
+test('thread pickup works anywhere without moving or losing the tip',()=>{
+ const h=setup();h.run("init('needle')");assert(h.fire('pointerdown',430,490));assert(h.run('state.grabbing'));assert.equal(h.run('state.fail'),0);assert.equal(h.run('state.thread.x'),175);
+ h.setTime(h.time+40);h.fire('pointermove',440,485);assert.equal(h.run('state.thread.x'),185);assert.equal(h.run('state.thread.y'),345);
+});
+test('needle cannot be won by holding still in its eye',()=>{
+ const h=setup();h.run("init('needle');state.thread=needleWorld({x:0,y:0},needleEye());state.wetUntil=10000");const p=h.run('state.thread');h.fire('pointerdown',p.x,p.y);h.step(2);assert(!h.run('state.finished'));assert.equal(h.run('state.threadStage'),'approach');
+});
+test('thread must follow the moving needle and pass completely through from the left',()=>{
+ const h=setup();h.run("init('needle');state.thread=needleWorld({x:-55,y:0},needleEye());state.wetUntil=10000");let p=h.run('state.thread');h.fire('pointerdown',p.x,p.y);
+ for(let i=1;i<=62&&!h.run('state.finished');i++){
+  h.setTime(h.time+20);p=h.run(`needleWorld({x:${-55+i*1.7},y:0},needleEye())`);h.fire('pointermove',p.x,p.y);h.run(`advance(.02,${h.time})`);
+  if(i===40){assert.equal(h.run('state.threadStage'),'through');assert(!h.run('state.finished'));}
+ }
+ assert(h.run('state.finished'));
+});
+test('missing the eye keeps the thread in hand near the needle for another try',()=>{
+ const h=setup();h.run("init('needle');state.thread=needleWorld({x:-12,y:30},needleEye())");let p=h.run('state.thread');h.fire('pointerdown',p.x,p.y);h.setTime(h.time+100);p=h.run('needleWorld({x:8,y:30},needleEye())');h.fire('pointermove',p.x,p.y);
+ assert(h.run('state.fail')>0);assert(h.run('state.grabbing'));assert(h.run('distance(state.thread,needleEye())<50'));assert(!h.run('state.finished'));
 });
 test('egg touch starts without teleporting the tool or agitating the white',()=>{
  const h=setup(true);h.run('reset()');assert(h.fire('pointerdown',800,600));assert.equal(h.run('p.x'),500);assert.equal(h.run('p.y'),470);assert.equal(h.run('heat'),0);h.setTime(h.time+40);h.fire('pointermove',810,595);assert(Math.abs(h.run('p.x')-510)<1e-8);assert(Math.abs(h.run('p.y')-465)<1e-8);h.fire('pointermove',100,100,2);assert(Math.abs(h.run('p.x')-510)<1e-8);h.fire('pointercancel',0,0);assert.equal(h.run('eggPointer'),null);assert(!h.run('down'));assert(h.fire('contextmenu',0,0));
