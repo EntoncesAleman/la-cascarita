@@ -15,8 +15,10 @@ globalThis.HouseModel=(()=>{
  const items=data.map(([id,name,kind,origin,dest,zone,extra={}])=>({id,name,kind,origin,dest,zone,...extra}));
  const slots={},roomSlots={};for(const item of items){slots[item.id]=item.under?slots[item.under]:item.washed?5+items.filter(i=>i.washed).findIndex(i=>i.id===item.id):item.inspection?3:(roomSlots[item.origin]||0);if(!item.under&&!item.washed&&!item.inspection)roomSlots[item.origin]=(roomSlots[item.origin]||0)+1;}
  const byId=Object.fromEntries(items.map(i=>[i.id,i])),dirtyOn={cushion:'living',wrapper:'kitchen',jeans:'bedroom',cloth:'bath',pan:'laundry',sheets:'entry'};
+ const chores={sweep:{room:'living',tool:'sweep',label:'Barrer debajo del sillón',missing:'Debajo del sillón quedan migas. El paño no llega: necesitás una escoba y una pala.',done:'La escoba y la pala juntaron hasta la última miga.'},repair:{room:'entry',tool:'screw',label:'Ajustar el perchero',missing:'El perchero está flojo. Hace falta un destornillador.',done:'El perchero quedó firme. Por fin.'},bed:{room:'bedroom',tool:'sheet',label:'Tender bien la cama',missing:'La sábana de repuesto no alcanza a cubrir el colchón. Necesitás la ajustable.',done:'La sábana ajustable quedó puesta. Las cuatro esquinas.'},box:{room:'laundry',tool:'tape',label:'Cerrar la caja del estante',missing:'Esta caja se vuelve a abrir. Necesitás cinta para dejarla cerrada.',done:'La caja quedó cerrada con la cinta del rollo.'}};
+ function task(s,id,hasTool){const chore=chores[id];if(!free(s)||!chore||chore.room!==s.room||s.chores[id])return false;if(!hasTool){say(s,chore.missing);return false}s.chores[id]=true;say(s,chore.done);return true}
  const dirtyClothes=['pajamas','shirt','sock-a','sock-b'];
- function create(){return{version:1,room:'living',slot:{...slots},status:Object.fromEntries(items.map(i=>[i.id,i.under||i.washed||i.inspection?'hidden':'floor'])),location:Object.fromEntries(items.map(i=>[i.id,i.origin])),basket:[],selected:null,cloth:false,unlocked:false,dirt:Object.fromEntries(Object.keys(rooms).map(r=>[r,0])),wash:'idle',washTime:0,inspection:false,won:false,crying:false,cryTime:0,cries:0,patience:100,elapsed:0,moves:0,mistakes:0,hints:0,message:'Levantá algo del piso. Seguro sabés dónde va.',log:[]}}
+ function create(){return{version:1,chores:{sweep:false,repair:false,bed:false,box:false},room:'living',slot:{...slots},status:Object.fromEntries(items.map(i=>[i.id,i.under||i.washed||i.inspection?'hidden':'floor'])),location:Object.fromEntries(items.map(i=>[i.id,i.origin])),basket:[],selected:null,cloth:false,unlocked:false,dirt:Object.fromEntries(Object.keys(rooms).map(r=>[r,0])),wash:'idle',washTime:0,inspection:false,won:false,crying:false,cryTime:0,cries:0,patience:100,elapsed:0,moves:0,mistakes:0,hints:0,message:'Levantá algo del piso. Seguro sabés dónde va.',log:[]}}
  function say(s,msg){s.message=msg;s.log=[msg,...s.log].slice(0,5);return msg}
  function floor(s,room=s.room){return items.filter(i=>s.status[i.id]==='floor'&&s.location[i.id]===room)}
  function free(s){return !s.won&&!s.crying}
@@ -53,7 +55,7 @@ globalThis.HouseModel=(()=>{
  function stopCry(s){if(!s.crying)return false;s.crying=false;s.patience=Math.min(100,s.patience+Math.min(30,Math.floor(s.cryTime)*5));say(s,'Bueno. Una habitación a la vez.');return true}
  function tick(s,dt){if(s.won)return false;dt=Math.max(0,Math.min(1,dt));if(s.crying){s.cryTime+=dt;return true}s.elapsed+=dt;if(s.wash==='running'){s.washTime=Math.max(0,s.washTime-dt);if(!s.washTime){s.wash='done';for(const item of items)if(item.washed)s.status[item.id]='floor';say(s,'Terminó el lavado. Ahora falta guardar la ropa limpia.');return true}}return false}
  function hint(s){if(!free(s))return false;s.hints++;const item=byId[s.selected];if(item){say(s,item.id==='cloth'?'El paño ya está en tu bolsillo.':item.id.startsWith('sock-')?'Juntá las dos medias. Una apareció bajo el almohadón y otra bajo el pantalón.':item.id==='cabinet-key'?'Probá la llave en la alacena de la cocina.':item.name+': '+rooms[item.dest].name+' → '+rooms[item.dest].zones[item.zone]+'.');}
-  else if(!s.cloth)say(s,'Buscá el paño de limpieza en el baño.');else if(!s.unlocked)say(s,'La campera del living estaba tapando algo.');else{const todo=Object.keys(rooms).find(r=>floor(s,r).length||s.dirt[r]);say(s,todo?'Revisá '+rooms[todo].name.toLowerCase()+'. Todavía hay algo pendiente.':s.wash==='idle'?'En el lavadero falta poner el lavado.':s.wash==='running'?'Esperá a que termine el lavado.':'Probá el botón «Ya terminé».');}return true}
+  else if(!s.cloth)say(s,'Buscá el paño de limpieza en el baño.');else if(!s.unlocked)say(s,'La campera del living estaba tapando algo.');else{const missing=Object.keys(chores).find(id=>!s.chores[id]);if(missing&&!Object.keys(rooms).some(r=>floor(s,r).length||s.dirt[r])){say(s,chores[missing].missing);return true}const todo=Object.keys(rooms).find(r=>floor(s,r).length||s.dirt[r]);say(s,todo?'Revisá '+rooms[todo].name.toLowerCase()+'. Todavía hay algo pendiente.':s.wash==='idle'?'En el lavadero falta poner el lavado.':s.wash==='running'?'Esperá a que termine el lavado.':'Probá el botón «Ya terminé».');}return true}
  function inspect(s){
   if(!free(s))return false;
   if(s.basket.length){say(s,'Todavía llevás cosas en el canasto. Primero hay que guardarlas.');return false}
@@ -61,6 +63,7 @@ globalThis.HouseModel=(()=>{
   if(s.wash!=='done'){say(s,s.wash==='running'?'Todavía está andando el lavarropas.':'Falta terminar con la ropa del lavadero.');return false}
   if(!s.inspection){s.inspection=true;for(const item of items)if(item.inspection)s.status[item.id]='floor';say(s,'Última recorrida: debajo de los muebles había unas cositas. Una en cada habitación.');return false}
   if(items.some(i=>s.status[i.id]!=='stored')){say(s,'Algo quedó sin revisar. Buscá lo que está debajo de otras cosas.');return false}
+  const left=Object.keys(chores).find(id=>!s.chores[id]);if(left){say(s,chores[left].missing+' Revisá '+rooms[chores[left].room].name.toLowerCase()+'.');return false}
   s.won=true;say(s,'La casa está en orden. Esta vez, de verdad.');return true;
  }
  function restore(raw){
@@ -68,6 +71,7 @@ globalThis.HouseModel=(()=>{
    if(!Object.hasOwn(rooms,old.room)||!Array.isArray(old.basket)||old.basket.length>3||old.basket.some(id=>!byId[id])||new Set(old.basket).size!==old.basket.length)return create();
    for(const item of items){if(!['floor','hidden','basket','stored'].includes(old.status?.[item.id])||!Object.hasOwn(rooms,old.location?.[item.id]))return create();s.status[item.id]=old.status[item.id];s.location[item.id]=old.location[item.id];s.slot[item.id]=Number.isInteger(old.slot?.[item.id])&&old.slot[item.id]>=0&&old.slot[item.id]<50?old.slot[item.id]:s.slot[item.id];}
    if(items.some(i=>(s.status[i.id]==='basket')!==old.basket.includes(i.id)))return create();
+   for(const id of Object.keys(chores))s.chores[id]=old.chores?.[id]===true;
    s.room=old.room;s.basket=old.basket;s.selected=s.basket.includes(old.selected)?old.selected:s.basket[0]||null;
    for(const k of ['unlocked','inspection','won'])s[k]=old[k]===true;s.cloth=s.status.cloth==='stored';
    for(const r of Object.keys(rooms))s.dirt[r]=Math.max(0,Math.min(3,Number(old.dirt?.[r])||0));
@@ -75,5 +79,5 @@ globalThis.HouseModel=(()=>{
    s.patience=Math.max(0,Math.min(100,Number(old.patience)||0));s.wash=['idle','running','done'].includes(old.wash)?old.wash:'idle';s.washTime=Math.max(0,Math.min(10,Number(old.washTime)||0));s.message='Seguimos donde habías dejado. Una habitación a la vez.';return s;
   }catch{return create()}
  }
- return{rooms,items,byId,dirtyClothes,create,restore,floor,go,pick,select,drop,place,clean,wash,cry,stopCry,tick,hint,inspect};
+ return{chores,task,rooms,items,byId,dirtyClothes,create,restore,floor,go,pick,select,drop,place,clean,wash,cry,stopCry,tick,hint,inspect};
 })();

@@ -22,14 +22,15 @@ function rand(a,b){return a+Math.random()*(b-a)}
 function setQuote(x){$('quote').textContent=x}
 function sound(){/* Diseño sin audio obligatorio */ }
 function init(m){
- document.body.classList.add('is-playing');mode=m;sheetPointers.clear();sheetKeys.clear();sneezeBlockedKeys.clear();activePointer=null;pressed=false;origin=null;lastPointer=null;tick=0;mx=190;my=310;
- state={attempts:0,chaos:false,chaosTime:0,chaosShown:false,elapsed:0,started:performance.now(),finished:false,progress:0,heat:0,fail:0,grabbing:false,penalty:0,noticeTime:0,tipAngle:rand(-1.8,1.8),peel:0,rotation:0,position:{x:170,y:330},fitted:[false,false,false,false],stripped:0,angle:null,thread:{x:175,y:350},wetUntil:0,threadHold:0,needleWobble:0,motion:0,peelStart:0,peelSpan:200,tapeGrip:0,dockHold:0,socketFace:Math.floor(rand(0,2)),cornerIndex:null,cornerHold:0,lastCorner:null,sheetHold:0,threadStage:'approach',threadInsertion:0,tightness:0,woodDamage:0,woodBroken:false,outcome:null,screwHint:'loose',tongue:{x:450,y:425},leaf:{x:494,y:267},leafLoosen:0,leafAttached:false,bombRemaining:0,bombStarted:false,bombTool:false,bombCuts:[false,false,false,false],bombFeedback:0,bombDial:0,bombButton:false,bombKnobs:[0,0],bombSwitches:[false,false,false],bombAux:[false,false],bombCode:'',bombKey:-1,bombChoice:null,bombMessage:'Panel en espera',sneeze:Sneeze.create(),broom:{x:280,y:430},dust:[],dustCollected:0,sweepRounds:0};
+ if(!Journey.can(m)){location.href=Journey.url("donkey");return;}
+ document.body.classList.add('is-playing');mode=m;sheetPointers.clear();sheetKeys.clear();donkeyBlockedKeys.clear();activePointer=null;pressed=false;origin=null;lastPointer=null;tick=0;mx=190;my=310;
+ state={attempts:0,chaos:false,chaosTime:0,chaosShown:false,elapsed:0,started:performance.now(),finished:false,progress:0,heat:0,fail:0,grabbing:false,penalty:0,noticeTime:0,tipAngle:rand(-1.8,1.8),peel:0,rotation:0,position:{x:170,y:330},fitted:[false,false,false,false],stripped:0,angle:null,thread:{x:175,y:350},wetUntil:0,threadHold:0,needleWobble:0,motion:0,peelStart:0,peelSpan:200,tapeGrip:0,dockHold:0,socketFace:Math.floor(rand(0,2)),cornerIndex:null,cornerHold:0,lastCorner:null,sheetHold:0,threadStage:'approach',threadInsertion:0,tightness:0,woodDamage:0,woodBroken:false,outcome:null,screwHint:'loose',tongue:{x:450,y:425},leaf:{x:494,y:267},leafLoosen:0,leafAttached:false,bombRemaining:0,bombStarted:false,bombTool:false,bombCuts:[false,false,false,false],bombFeedback:0,bombDial:0,bombButton:false,bombKnobs:[0,0],bombSwitches:[false,false,false],bombAux:[false,false],bombCode:'',bombKey:-1,bombChoice:null,bombMessage:'Panel en espera',donkey:Donkey.create(),broom:{x:280,y:430},dust:[],dustCollected:0,sweepRounds:0};
  if(m==='sweep')state.dust=floorDust();
  if(m==='dog')createDog();if(m==='usb')createUSB();if(m==='sushi')createSushi();
  $('hero').style.display='none';$('catalog').style.display='none';$('arcade').classList.add('visible');$('game-title').textContent=defs[m].title.toUpperCase();$('game-subtitle').textContent='Dificultad estimada: baja';$('input-help').textContent={dog:'Deslizá despacio. Esperá a que abra la boca y sostené el bocado.',sushi:'Sostené para agarrar, llevá despacio y soltá sobre el plato. No aprietes de más.',sweep:'Barré hacia la pala de la derecha. Después, levantala.',leaf:'Deslizá para mover la lengua. Despegá la hojita y bajala despacio.',bomb:'Revisá el panel y elegí un ajuste. Todavía hay tiempo.',tape:'Sostené la pestaña un instante. Tirones cortos a la derecha; soltá y repetí.',usb:'Conectá los tres cables. Probá puertos: los colores pueden engañar.',sheet:'Un dedo en cada esquina: sostené los cuatro a la vez. En compu: A + S + K + L.',screw:'Girá despacio y soltá en el punto justo. Una vuelta de más puede partir la madera.',needle:'Mové el hilo desde cualquier parte. Atravesá el ojo de izquierda a derecha.'}[m];
  $('task-image').src='assets/'+m+'-960.webp';$('task-image').alt=defs[m].title;$('task-caption').textContent=defs[m].title;
  $('canvas-label').textContent=defs[m].label;$('instructions').textContent=defs[m].instructions;$('meter-label').textContent=defs[m].meter;
- $('overlay').classList.remove('on');setQuote(defs[m].quote);actions();location.hash=m;
+ $('overlay').querySelector('.journey-next')?.remove();$('overlay').querySelector('.take-tool')?.remove();$('overlay').classList.remove('on');setQuote(defs[m].quote);actions();location.hash=m;
  window.scrollTo({top:0,behavior:'smooth'});
 }
 function actions(){
@@ -90,7 +91,7 @@ function failure(msg){
 function win(){
  if(mode==='sweep')return;
  if(mode==='bomb')return;
- if(state.finished)return;if(Sneeze.finish(state.sneeze)){sneezeImpact();return}state.finished=true;state.outcome='won';state.progress=1;
+ if(state.finished)return;if(Donkey.finish(state.donkey)){donkeyImpact();return}state.finished=true;state.outcome='won';state.progress=1;
  $('overlay-title').textContent='¿Al fin?';$('overlay-text').textContent='Lo conseguiste en '+fmt(state.elapsed)+' y '+state.attempts+' intentos. La humanidad esperaba menos de vos.';
  $('again').textContent='Jugar de nuevo';$('overlay').classList.add('on');setQuote('“Una victoria absolutamente innecesaria.”');
 }
@@ -99,7 +100,7 @@ function point(e){const r=canvas.getBoundingClientRect();return{x:(e.clientX-r.l
 function distance(a,b){return Math.hypot(a.x-b.x,a.y-b.y)}
 function touchRadius(px,base){return inputType==='touch'?Math.max(base,px*W/canvas.getBoundingClientRect().width):base}
 const usbColors=[{name:'coral',base:'#da7b6d',light:'#f3b6a1',dark:'#984a49'},{name:'azul',base:'#69a9c2',light:'#acd7df',dark:'#3f718f'},{name:'amarillo',base:'#dfb14e',light:'#f7d991',dark:'#a47e32'}];
-let sheetPointers=new Map(),sheetKeys=new Set(),sneezeBlockedKeys=new Set();
+let sheetPointers=new Map(),sheetKeys=new Set(),donkeyBlockedKeys=new Set();
 function createUSB(){
  const choices=[[1,2,0],[2,0,1],[0,2,1],[1,0,2],[2,1,0]],wiring=choices[Math.floor(rand(0,choices.length))];
  state.usbPorts=usbColors.map((color,i)=>({id:i,color,face:Math.floor(rand(0,2)),occupiedBy:null,y:210+i*125}));
@@ -155,13 +156,13 @@ function sheetMove(e){
  held.inside=distance(point(e),corners[held.corner])<touchRadius(30,80);syncSheet();
 }
 function sheetUp(e){
- if(e&&e.pointerId!==undefined)sheetPointers.delete(e.pointerId);else{sheetPointers.clear();sheetKeys.clear();sneezeBlockedKeys.clear()}
+ if(e&&e.pointerId!==undefined)sheetPointers.delete(e.pointerId);else{sheetPointers.clear();sheetKeys.clear();donkeyBlockedKeys.clear()}
  syncSheet();
 }
 function sheetKey(e,down){
  if(mode!=='sheet'||!state||state.finished||e.ctrlKey||e.metaKey||e.altKey)return;
  const i=['a','s','k','l'].indexOf(String(e.key||'').toLowerCase());if(i<0)return;e.preventDefault();
- if(down){if(sneezeBlockedKeys.has(i))return;sheetKeys.add(i);}else{sheetKeys.delete(i);sneezeBlockedKeys.delete(i);}syncSheet();
+ if(down){if(donkeyBlockedKeys.has(i))return;sheetKeys.add(i);}else{sheetKeys.delete(i);donkeyBlockedKeys.delete(i);}syncSheet();
 }
 function needleEye(now=performance.now()){return{x:620+Math.sin(now/1570)*25,y:310+Math.sin(now/1070)*29+Math.sin(now/2470)*8,tilt:Math.sin(now/1920)*.12}}
 function needleLocal(p,eye){const x=p.x-eye.x,y=p.y-eye.y;return{x:x*Math.cos(eye.tilt)+y*Math.sin(eye.tilt),y:-x*Math.sin(eye.tilt)+y*Math.cos(eye.tilt)}}
@@ -430,25 +431,11 @@ function up(e){
  if(mode==='sushi')releaseSushi(e);
  if(finish)win();
 }
-function almostThere(){
- if(!state||state.finished||state.penalty>0)return false;
- if(mode==='bomb')return false;
- if(mode==='dog')return state.dogStage==='check'||state.dogFeed>.35;
- if(mode==='sheet')return state.fitted.every(Boolean)&&state.sheetHold>.65;
- if(!pressed||!state.grabbing)return false;
- if(mode==='sushi')return state.sushiHeld&&sushiPiece().position.x>490;
- if(mode==='sweep')return state.progress>.78;
- if(mode==='tape')return state.peel>.65;
- if(mode==='usb')return state.usbCables.filter(c=>c.connected).length===2&&state.dockHold>.35;
- if(mode==='screw')return state.tightness>.85;
- if(mode==='needle'){const p=needleLocal(state.thread,needleEye());return state.threadStage==='through'||(p.x> -24&&p.x<30&&Math.abs(p.y)<24)}
- if(mode==='leaf')return state.leafLoosen>.85||state.leafAttached;
- return false;
-}
-function sneezeImpact(){
- if(!state||state.finished||mode==='bomb')return;
+function donkeyImpact(){
+ if(!state||state.finished)return;
+ if(mode==='bomb'){state.bombMessage='El burro sacudió el panel.';state.bombFeedback=3;return;}
  const ids=mode==='sheet'?Array.from(sheetPointers.keys()):activePointer===null?[]:[activePointer];
- if(mode==='sheet'){for(const key of sheetKeys)sneezeBlockedKeys.add(key);sheetPointers.clear();sheetKeys.clear();state.fitted=[false,false,false,false];state.sheetHold=0;}
+ if(mode==='sheet'){for(const key of sheetKeys)donkeyBlockedKeys.add(key);sheetPointers.clear();sheetKeys.clear();state.fitted=[false,false,false,false];state.sheetHold=0;}
  pressed=false;activePointer=null;state.grabbing=false;state.dockHold=0;state.tapeGrip=0;state.motion=0;state.fail++;state.attempts++;state.penalty=.65;state.noticeTime=4;
  for(const id of ids)if(canvas.hasPointerCapture?.(id))canvas.releasePointerCapture(id);
  if(mode==='sweep'){state.dust.push(...floorDust(8));state.dustCollected=Math.max(0,state.dustCollected-8);state.progress=Math.min(.99,state.dustCollected/18);}
@@ -460,14 +447,17 @@ function sneezeImpact(){
  if(mode==='leaf'){state.leaf={x:494,y:267};state.tongue={x:450,y:425};state.leafAttached=false;state.leafLoosen=0;state.progress=0;}
  if(mode==='sheet')state.progress=0;
  if(mode==='screw'){state.tightness+=.34;updateWood();}
- setQuote(mode==='screw'&&state.woodBroken?'“¡Achís! Una vuelta de más y se partió.”':'“¡Achís! Justo ahora. Volvé a agarrar.”');
+ setQuote(mode==='screw'&&state.woodBroken?'“El burro pateó la tabla. Se partió.”':'“El burro pateó el tablero. Volvé a agarrar.”');
 }
 
 function advance(dt,now){
  if(!state)return;
+ if(state.finished){Journey.next(mode,$('overlay'));if(state.outcome!=='won')$('overlay-title').textContent='GAME OVER';}
+ if(document.querySelector('dialog[open]')){state.started+=dt*1000;return;}
+ if(!state.finished&&!state.chaos){Donkey.prank(dt,['usb','tape','needle','sushi'].includes(mode));if(mode!=='bomb'&&(state.fail>=3||(mode==='sweep'&&state.attempts>=4))){state.finished=true;state.outcome='lost';pressed=false;state.grabbing=false;$('overlay-title').textContent='GAME OVER';$('overlay-text').textContent='Esta tarea queda para otra partida.';$('again').textContent='Jugar de nuevo';$('overlay').classList.add('on');Journey.next(mode,$('overlay'));return;}}
  if(state.chaos){state.chaosTime+=dt;chaosOverlay();}
  state.noticeTime=Math.max(0,state.noticeTime-dt);
- if(!state.chaos&&mode!=='bomb'&&Sneeze.tick(state.sneeze,dt,almostThere())){sneezeImpact();return}
+ if(!state.finished&&!state.chaos&&Donkey.tick(state.donkey,dt,mode!=='bomb'||state.bombStarted,state.attempts)){Donkey.visit();donkeyImpact();return}
  if(state.finished)return;
  state.elapsed=mode==='bomb'?(state.bombStarted?state.elapsed+dt:0):(now-state.started)/1000;state.penalty=Math.max(0,state.penalty-dt);state.heat=Math.max(0,state.heat-dt*.045);
  if(now-tick>100)state.motion=0;
@@ -524,7 +514,7 @@ function scene(){
  if(mode==='dog')drawDog();if(mode==='tape')drawTape();if(mode==='usb')drawUSB();if(mode==='sheet')drawSheet();if(mode==='screw')drawScrew();if(mode==='needle')drawNeedle();if(mode==='leaf')drawLeaf();if(mode==='bomb')drawBomb();if(mode==='sweep')drawSweep();if(mode==='sushi')drawSushi();
  ctx.restore();if(state.chaos)Desastre.draw(ctx,W,H,state.chaosTime,mode);
  if(state.noticeTime>0&&!state.chaos){rect(280,77,340,36,18,'#f5e0d0');text(450,101,mode==='tape'?'La cinta se soltó. Volvé a la pestaña.':mode==='leaf'?'Se escapó la hojita. Probá más suave.':mode==='sushi'?'Se desarmó. Probá con otra pieza.':mode==='dog'?'El queso sí. La pastilla, todavía no.':'Volvé a intentar, despacio.',14,'#9a4d32')}
- Sneeze.draw(ctx,state.sneeze,W,H);
+ Donkey.draw(ctx,state.donkey,W,H);
  ctx.restore();
 }
 // One projection defines the visible roll, attached ribbon, and interactive cut edge.

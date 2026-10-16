@@ -9,3 +9,8 @@ Nunca se generan tareas infinitas. Se puede dejar lo que se lleva en el piso de 
 «Llorar un rato» está dentro del baño. Es una pausa voluntaria, no borra objetos, detiene el reloj y el lavado y recupera hasta 30 puntos de paciencia. La partida se guarda en el dispositivo. El final ofrece «Jugar de nuevo».
 
 Pruebas: `node tests/house.cjs` verifica una solución completa, inventario, bloqueo de alacena, medias, limpieza, baño y guardado. `node tests/gameplay.cjs` verifica los juegos anteriores. En Wyleman, `scripts/qa/qa-house-browser.mjs` recorre la partida completa con controles reales y valida una pantalla táctil de 390 px.
+
+
+La colección ahora se recorre por partidas terminadas, no por victorias. `journey.js` guarda desbloqueos y herramientas en claves independientes. Las pantallas finales de cinta, sábana, tornillo y barrida permiten llevar su herramienta, incluso al perder. La casa exige cuatro tareas finitas (`chores`), con pistas contextuales y enlaces a sus minijuegos; las herramientas no se consumen. Las partidas y herramientas sobreviven a reinicios de la casa. Las partidas ya ganadas de versiones anteriores se conservan.
+
+`donkey.js` reemplaza al estornudo: aviso, patada con efecto sobre el tablero y espera entre visitas. Los falsos Game over de algunas tareas abren un diálogo, se disculpan y permiten continuar sin desbloquear ni descontar progreso. Tres errores reales cierran la partida normal; la bomba conserva su plazo oculto y la barrida termina después de cuatro intentos.
