@@ -7,7 +7,7 @@ function setup(egg=false,width=360){
  const canvas={style:{},width,height:width*(egg?735/1000:660/900),getContext:()=>ctx,getBoundingClientRect:()=>({left:0,top:0,width,height:width*(egg?735/1000:660/900)}),addEventListener:(name,fn)=>{(listeners[name]??=[]).push(fn)},setPointerCapture:noop,focus:noop};
  function el(id){return els[id]??={style:{},classList:{add:noop,remove:noop},textContent:'',innerHTML:'',setAttribute:noop,querySelector:()=>null,append:noop};}
  const s={console,document:{body:{classList:{add:noop,remove:noop}},getElementById:id=>id==='scene'?canvas:el(id),querySelector:selector=>selector==='canvas'?canvas:null,querySelectorAll:()=>[]},window:{scrollTo:noop,addEventListener:noop,devicePixelRatio:1},performance:{now:()=>now},location:{hash:'',pathname:'/'},history:{replaceState:noop},localStorage:{getItem:()=>null,setItem:noop},requestAnimationFrame:noop,devicePixelRatio:1};
- vm.createContext(s);vm.runInContext(fs.readFileSync(path.join(root,'chaos.js'),'utf8'),s);s.Journey={can:()=>true,next:noop,url:()=>'',finish:noop};s.Donkey={create:()=>({flash:0,count:0}),finish:()=>false,tick:()=>false,draw:noop,prank:noop,visit:noop};const source=egg?fs.readFileSync(path.join(root,'cascarita.html'),'utf8').split("<script>'use strict';")[1].split('</script>')[0]:fs.readFileSync(path.join(root,'arcade.js'),'utf8');vm.runInContext(source,s);
+ vm.createContext(s);vm.runInContext(fs.readFileSync(path.join(root,'chaos.js'),'utf8'),s);s.Journey={can:()=>true,next:noop,url:()=>'',finish:noop,begin:noop,end:noop,attempts:()=>0};s.Donkey={create:()=>({flash:0,count:0}),finish:()=>false,tick:()=>false,draw:noop,prank:noop,visit:noop};const source=egg?fs.readFileSync(path.join(root,'cascarita.html'),'utf8').split("<script>'use strict';")[1].split('</script>')[0]:fs.readFileSync(path.join(root,'arcade.js'),'utf8');vm.runInContext(source,s);
  const run=code=>vm.runInContext(code,s);
  function fire(type,x,y,id=1,pointerType='touch'){
   let prevented=false;const scale=width/(egg?1000:900),e={clientX:x*scale,clientY:y*scale,pointerId:id,pointerType,type,preventDefault(){prevented=true}};
@@ -280,19 +280,20 @@ test('gameplay controls live inside each board and retain native accessible butt
 });
 test('voluntary destruction unlocks only after attempt 25 and can restart all ordinary games',()=>{
  for(const mode of ['tape','usb','sheet','screw','needle','leaf','sweep','sushi','dog']){
-  const h=setup();h.run(`init('${mode}');state.attempts=25;syncActions()`);assert(h.els['break-all'].hidden);h.els['break-all'].onclick();assert(!h.run('state.chaos'),mode);
-  h.run('state.attempts=26;syncActions()');assert(!h.els['break-all'].hidden);h.els['break-all'].onclick();assert(h.run('state.chaos'),mode);assert.equal(h.run('state.outcome'),'chaos');assert(!h.run('pressed'));assert.equal(h.run('activePointer'),null);
+  const h=setup();h.run(`init('${mode}');state.attempts=25;Journey.attempts=()=>25;syncActions()`);assert(h.els['break-all'].hidden);h.els['break-all'].onclick();assert(!h.run('state.chaos'),mode);
+  h.run('state.attempts=26;Journey.attempts=()=>26;syncActions()');assert(!h.els['break-all'].hidden);h.els['break-all'].onclick();assert(h.run('state.chaos'),mode);assert.equal(h.run('state.outcome'),'chaos');assert(!h.run('pressed'));assert.equal(h.run('activePointer'),null);
   h.run('scene()');h.step(1.3);assert(h.run('state.chaosShown'));assert.equal(h.els['overlay-title'].textContent,'GAME OVER');assert(h.els.lick.disabled);
-  h.els.again.onclick();assert(!h.run('state.chaos'));assert(!h.run('state.finished'));assert.equal(h.run('state.attempts'),0);assert(h.els['break-all'].hidden);
+  h.els.again.onclick();assert(!h.run('state.chaos'));assert(!h.run('state.finished'));assert.equal(h.run('state.attempts'),0);assert(!h.els['break-all'].hidden);
  }
 });
 test('destroying the bomb disables controls but preserves its original hidden deadline',()=>{
- const h=setup();h.run("init('bomb');bombAction('button');state.attempts=26");const remaining=h.run('state.bombRemaining');h.els['break-all'].onclick();assert(h.run('state.chaos'));assert(!h.run('state.finished'));assert.equal(h.run('state.bombRemaining'),remaining);
+ const h=setup();h.run("init('bomb');bombAction('button');state.attempts=26;Journey.attempts=()=>26");const remaining=h.run('state.bombRemaining');h.els['break-all'].onclick();assert(h.run('state.chaos'));assert(!h.run('state.finished'));assert.equal(h.run('state.bombRemaining'),remaining);
  const count=h.run('state.attempts');h.els.manual.onclick();h.run("bombAction('key',0);scene()");assert.equal(h.run('state.attempts'),count);assert.equal(h.run('state.bombCode'),'');h.step(remaining-.1);assert(!h.run('state.finished'));h.step(.2);assert.equal(h.run('state.outcome'),'exploded');
 });
 test('egg destruction unlocks after attempt 25, cancels contact and resets cleanly',()=>{
- const h=setup(true);h.run('reset();attempts=25;syncEggControls()');assert(h.els['egg-break'].hidden);h.els['egg-break'].onclick();assert(!h.run('eggChaos'));
- h.run('attempts=26;syncEggControls()');assert(!h.els['egg-break'].hidden);h.fire('pointerdown',100,200);h.els['egg-break'].onclick();assert(h.run('eggChaos'));assert(!h.run('active'));assert(!h.run('holding'));assert(!h.run('down'));assert.equal(h.run('eggPointer'),null);
- h.step(1.3);assert(h.run('eggChaosShown'));assert.equal(h.els.title.textContent,'Bueno. Se rompió todo.');h.els.start.onclick();assert(!h.run('eggChaos'));assert(h.run('active'));assert.equal(h.run('attempts'),0);assert(h.els['egg-break'].hidden);
+ const h=setup(true);h.run('reset();attempts=25;Journey.attempts=()=>25;syncEggControls()');assert(h.els['egg-break'].hidden);h.els['egg-break'].onclick();assert(!h.run('eggChaos'));
+ h.run('attempts=26;Journey.attempts=()=>26;syncEggControls()');assert(!h.els['egg-break'].hidden);h.fire('pointerdown',100,200);h.els['egg-break'].onclick();assert(h.run('eggChaos'));assert(!h.run('active'));assert(!h.run('holding'));assert(!h.run('down'));assert.equal(h.run('eggPointer'),null);
+ h.step(1.3);assert(h.run('eggChaosShown'));assert.equal(h.els.title.textContent,'Bueno. Se rompió todo.');h.els.start.onclick();assert(!h.run('eggChaos'));assert(h.run('active'));assert.equal(h.run('attempts'),0);assert(!h.els['egg-break'].hidden);
 });
 test('three real mistakes end a round and retries clear the loss state',()=>{const h=setup();h.run("init('tape');failure('Uno');failure('Dos');failure('Tres');advance(.016,1000)");assert.equal(h.run('state.outcome'),'lost');assert.equal(h.els['overlay-title'].textContent,'GAME OVER');h.run("init('tape')");assert(!h.run('state.finished'));assert.equal(h.run('state.fail'),0)});
+test('displayed attempts ignore interaction counts and use completed real losses',()=>{const h=setup();h.run("init('usb');state.attempts=100;frame(1016)");assert.equal(h.els.attempts.textContent,'00');assert(h.els['break-all'].hidden);h.run("Journey.attempts=()=>2;frame(1032)");assert.equal(h.els.attempts.textContent,'02');const egg=setup(true);egg.run('reset();attempts=99;draw(.016)');assert.equal(egg.els.attempts.textContent,'00');egg.run('Journey.attempts=()=>3;draw(.016)');assert.equal(egg.els.attempts.textContent,'03')});

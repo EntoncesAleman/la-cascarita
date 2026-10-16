@@ -16,12 +16,12 @@
  function format(seconds){return Math.floor(seconds/60)+':'+String(Math.floor(seconds%60)).padStart(2,'0')}
  function closeDialog(){if($('house-dialog').open)$('house-dialog').close();dialogMode=null}
  function showCry(){dialogMode='cry';$('house-dialog').innerHTML=`<div class="cry-art" aria-hidden="true"><svg viewBox="0 0 140 120"><rect x="15" y="7" width="110" height="104" rx="16" fill="#dce4d2" stroke="#bacbb4"/><path d="M15 42h110M15 76h110M51 7v104M88 7v104" stroke="#c3d0b9"/><ellipse cx="70" cy="93" rx="32" ry="8" fill="#c1cbb7"/><path d="M47 71q22 12 46 0v19H47z" fill="#f7f2dc"/><ellipse cx="70" cy="70" rx="24" ry="12" fill="#faf5e2" stroke="#bfcbb5"/><path d="M62 25q-14 19 0 20q15-1 0-20" fill="#97b9b3" class="tear"/><path d="M83 26q-14 19 0 20q15-1 0-20" fill="#97b9b3" class="tear second"/></svg></div><p class="eyebrow">PUERTA CERRADA. UN MOMENTO.</p><h2 id="dialog-title">Llorar un rato.</h2><p id="cry-copy">Mirás un azulejo. Después, otro.<br>La casa sigue ahí. Pero puede esperar.</p><p id="cry-time">Tomate tu tiempo.</p>${button('stop-cry','Bueno. Seguimos.','','control primary')}`;$('house-dialog').showModal()}
- function showWin(){Journey.finish("house");dialogMode='win';$('house-dialog').innerHTML=`<p class="eyebrow">AHORA SÍ.</p><h2 id="dialog-title">La casa está en orden.</h2><p>Todo guardado. Hasta lo que estaba debajo.<br>Terminaste en ${format(s.elapsed)}, con ${s.moves} recorridos${s.cries?' y '+s.cries+' pausa'+(s.cries>1?'s':'')+' en el baño':''}.</p>${button('reset','Jugar de nuevo','','control primary')}${button('close-dialog','Mirar la casa')}`;$('house-dialog').showModal()}
+ function showWin(){Journey.end("house","won",s.elapsed);Journey.finish("house");dialogMode='win';$('house-dialog').innerHTML=`<p class="eyebrow">AHORA SÍ.</p><h2 id="dialog-title">La casa está en orden.</h2><p>Todo guardado. Hasta lo que estaba debajo.<br>Terminaste en ${format(s.elapsed)}, con ${s.moves} recorridos${s.cries?' y '+s.cries+' pausa'+(s.cries>1?'s':'')+' en el baño':''}.</p>${button('reset','Jugar de nuevo','','control primary')}${button('close-dialog','Mirar la casa')}<a class="journey-next" href="results.html">Ver resultado final →</a>`;$('house-dialog').showModal()}
  function showRestart(){dialogMode='restart';$('house-dialog').innerHTML=`<h2 id="dialog-title">¿Volver a empezar?</h2><p>La casa vuelve al desorden inicial. Se borra este recorrido guardado.</p>${button('reset','Empezar de cero','','control primary')}${button('close-dialog','Seguir ordenando')}`;$('house-dialog').showModal()}
  function dispatch(action,b){
   if(action==='chore'){const id=b.dataset.chore,c=M.chores[id];M.task(s,id,Journey.has(c.tool));save();render();if(!Journey.has(c.tool)){const area=document.querySelector('.room-tools');const a=document.createElement('a');a.href=Journey.url(c.tool);a.className='control';a.textContent='Buscar '+Journey.rewards[c.tool].toLowerCase();area.append(a)}return;}
 
-  if(action==='reset'){s=M.create();closeDialog();save();render();return}
+  if(action==='reset'){s=M.create();Journey.begin('house');closeDialog();save();render();return}
   if(action==='close-dialog'){closeDialog();return}
   if(action==='stop-cry'){M.stopCry(s);closeDialog();save();render();return}
   if(action==='restart'){showRestart();return}
@@ -44,6 +44,7 @@
  setInterval(()=>{const changed=M.tick(s,1);if(s.crying){$('cry-time').textContent=Math.floor(s.cryTime)+' segundos sin ordenar nada. También está bien.';if(s.cryTime>=5)$('cry-copy').textContent='Respirás un poco. No hace falta resolver toda la casa de una vez.';}else if(changed){save();render()}else if($('house-time'))$('house-time').textContent=format(s.elapsed);if(Math.floor(s.elapsed)%10===0)save()},1000);
  const visitor=Donkey.create();
  setInterval(()=>{if(s.won||s.crying||dialogMode||document.hidden)return;const warned=visitor.warning;if(Donkey.tick(visitor,1,true,s.moves)){Donkey.visit();const id=s.basket[0];if(id){s.selected=id;M.drop(s);}s.message='El burro pateó el canasto. Lo que cayó sigue en esta habitación.';save();render();}else if(visitor.warning&&!warned){s.message='Se escuchan cascos en el pasillo…';render();}},1000);
+ if(!s.won)Journey.begin('house');
  render();if(s.won)showWin();
  globalThis.HouseGame={get state(){return s},model:M,render,dispatch};
 })();

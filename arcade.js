@@ -23,7 +23,7 @@ function setQuote(x){$('quote').textContent=x}
 function sound(){/* Diseño sin audio obligatorio */ }
 function init(m){
  if(!Journey.can(m)){location.href=Journey.url("donkey");return;}
- document.body.classList.add('is-playing');mode=m;sheetPointers.clear();sheetKeys.clear();donkeyBlockedKeys.clear();activePointer=null;pressed=false;origin=null;lastPointer=null;tick=0;mx=190;my=310;
+ Journey.begin(m);document.body.classList.add('is-playing');mode=m;sheetPointers.clear();sheetKeys.clear();donkeyBlockedKeys.clear();activePointer=null;pressed=false;origin=null;lastPointer=null;tick=0;mx=190;my=310;
  state={attempts:0,chaos:false,chaosTime:0,chaosShown:false,elapsed:0,started:performance.now(),finished:false,progress:0,heat:0,fail:0,grabbing:false,penalty:0,noticeTime:0,tipAngle:rand(-1.8,1.8),peel:0,rotation:0,position:{x:170,y:330},fitted:[false,false,false,false],stripped:0,angle:null,thread:{x:175,y:350},wetUntil:0,threadHold:0,needleWobble:0,motion:0,peelStart:0,peelSpan:200,tapeGrip:0,dockHold:0,socketFace:Math.floor(rand(0,2)),cornerIndex:null,cornerHold:0,lastCorner:null,sheetHold:0,threadStage:'approach',threadInsertion:0,tightness:0,woodDamage:0,woodBroken:false,outcome:null,screwHint:'loose',tongue:{x:450,y:425},leaf:{x:494,y:267},leafLoosen:0,leafAttached:false,bombRemaining:0,bombStarted:false,bombTool:false,bombCuts:[false,false,false,false],bombFeedback:0,bombDial:0,bombButton:false,bombKnobs:[0,0],bombSwitches:[false,false,false],bombAux:[false,false],bombCode:'',bombKey:-1,bombChoice:null,bombMessage:'Panel en espera',donkey:Donkey.create(),broom:{x:280,y:430},dust:[],dustCollected:0,sweepRounds:0};
  if(m==='sweep')state.dust=floorDust();
  if(m==='dog')createDog();if(m==='usb')createUSB();if(m==='sushi')createSushi();
@@ -58,11 +58,11 @@ function actions(){
 }
 function syncActions(){
  if(!state)return;
- $('break-all').hidden=!Desastre.ready(state.attempts)||state.finished||state.chaos;
+ $('break-all').hidden=!Desastre.ready(Journey.attempts(mode))||state.finished||state.chaos;
  for(const id of ['cheese','lift-pan','pliers','manual','verify','rotate','lick','find','steady','break-all']){const button=$(id);if(button)button.disabled=state.finished||state.chaos;}
 }
 function destroyGame(){
- if(!state||state.finished||state.chaos||!Desastre.ready(state.attempts))return;
+ if(!state||state.finished||state.chaos||!Desastre.ready(Journey.attempts(mode)))return;
  const ids=mode==='sheet'?Array.from(sheetPointers.keys()):activePointer===null?[]:[activePointer];
  state.chaos=true;state.chaosTime=0;state.grabbing=false;pressed=false;activePointer=null;sheetPointers.clear();sheetKeys.clear();state.dockHold=0;state.dogFeed=0;state.threadHold=0;
  if(mode==='sushi'){state.sushiHeld=false;for(const c of state.sushiPieces){c.broken=true;c.delivered=false;}}
@@ -91,8 +91,8 @@ function failure(msg){
 function win(){
  if(mode==='sweep')return;
  if(mode==='bomb')return;
- if(state.finished)return;if(Donkey.finish(state.donkey)){donkeyImpact();return}state.finished=true;state.outcome='won';state.progress=1;
- $('overlay-title').textContent='¿Al fin?';$('overlay-text').textContent='Lo conseguiste en '+fmt(state.elapsed)+' y '+state.attempts+' intentos. La humanidad esperaba menos de vos.';
+ if(state.finished)return;if(Donkey.finish(state.donkey)){donkeyImpact();return}state.finished=true;state.outcome='won';state.progress=1;Journey.end(mode,'won',state.elapsed);
+ $('overlay-title').textContent='¿Al fin?';$('overlay-text').textContent='Lo conseguiste en '+fmt(state.elapsed)+' y '+Journey.attempts(mode)+' intentos. La humanidad esperaba menos de vos.';
  $('again').textContent='Jugar de nuevo';$('overlay').classList.add('on');setQuote('“Una victoria absolutamente innecesaria.”');
 }
 function fmt(s){return Math.floor(s/60)+':'+String(Math.floor(s%60)).padStart(2,'0')}
@@ -256,7 +256,7 @@ function bombAction(action,wireIndex=null){
  state.bombMessage={knob:'Selector calibrado. Revisá la otra señal.',switch:'Canal actualizado. Indicadores en línea.',aux:'Módulo auxiliar listo. Falta confirmar.',key:'Secuencia recibida. Comprobando combinación.',pliers:'Pinzas listas. Elegí un cable.',wire:'Cable cortado. La señal parece estable.',button:'Ajuste recibido. Indicador actualizado.',dial:'Frecuencia ajustada. Señal alineada.',manual:'Revisá cables, selector e indicadores.',check:'Señal estable. Queda un ajuste pendiente.'}[action]||'Revisando…';setQuote('“'+state.bombMessage+'”');
 }
 function explodeBomb(){
- if(!state||state.finished)return;state.finished=true;state.outcome='exploded';state.grabbing=false;state.progress=.99;state.fail++;
+ if(!state||state.finished)return;state.finished=true;state.outcome='exploded';Journey.end(mode,'lost',state.elapsed);state.grabbing=false;state.progress=.99;state.fail++;
  $('overlay-title').textContent='Estaba casi.';$('overlay-text').textContent='Las señales parecían correctas. Algo quedó pendiente.';
  $('again').textContent='Jugar de nuevo';$('overlay').classList.add('on');setQuote('“La próxima seguro.”');
 }
@@ -416,7 +416,7 @@ function updateWood(){
 }
 function breakWood(){
  if(state.finished)return;
- const id=activePointer;state.woodBroken=true;state.woodDamage=1;state.finished=true;state.outcome='broken';state.grabbing=false;state.fail++;state.attempts++;
+ const id=activePointer;state.woodBroken=true;state.woodDamage=1;state.finished=true;state.outcome='broken';Journey.end(mode,'lost',state.elapsed);state.grabbing=false;state.fail++;state.attempts++;
  state.tightness=0;state.progress=0;state.angle=null;state.screwHint='broken';pressed=false;activePointer=null;
  if(id!==null&&canvas.hasPointerCapture?.(id))canvas.releasePointerCapture(id);
  $('overlay-title').textContent='Te pasaste de lo verde.';$('overlay-text').textContent='La madera se partió. La barra vuelve al principio: soltá dentro de la zona verde en el próximo intento.';$('again').textContent='Jugar de nuevo';$('overlay').classList.add('on');setQuote('“Era soltar ahí. Justo ahí.”');syncActions();
@@ -452,9 +452,9 @@ function donkeyImpact(){
 
 function advance(dt,now){
  if(!state)return;
- if(state.finished){Journey.next(mode,$('overlay'));if(state.outcome!=='won')$('overlay-title').textContent='GAME OVER';}
+ if(state.finished){Journey.end(mode,state.outcome==='won'?'won':'lost',state.elapsed);Journey.next(mode,$('overlay'));if(state.outcome!=='won')$('overlay-title').textContent='GAME OVER';}
  if(document.querySelector('dialog[open]')){state.started+=dt*1000;return;}
- if(!state.finished&&!state.chaos){Donkey.prank(dt,['usb','tape','needle','sushi'].includes(mode));if(mode!=='bomb'&&(state.fail>=3||(mode==='sweep'&&state.attempts>=4))){state.finished=true;state.outcome='lost';pressed=false;state.grabbing=false;$('overlay-title').textContent='GAME OVER';$('overlay-text').textContent='Esta tarea queda para otra partida.';$('again').textContent='Jugar de nuevo';$('overlay').classList.add('on');Journey.next(mode,$('overlay'));return;}}
+ if(!state.finished&&!state.chaos){Donkey.prank(dt,['usb','tape','needle','sushi'].includes(mode));if(mode!=='bomb'&&(state.fail>=3||(mode==='sweep'&&state.attempts>=4))){state.finished=true;state.outcome='lost';pressed=false;state.grabbing=false;$('overlay-title').textContent='GAME OVER';$('overlay-text').textContent='Esta tarea queda para otra partida.';$('again').textContent='Jugar de nuevo';$('overlay').classList.add('on');Journey.end(mode,'lost',state.elapsed);Journey.next(mode,$('overlay'));return;}}
  if(state.chaos){state.chaosTime+=dt;chaosOverlay();}
  state.noticeTime=Math.max(0,state.noticeTime-dt);
  if(!state.finished&&!state.chaos&&Donkey.tick(state.donkey,dt,mode!=='bomb'||state.bombStarted,state.attempts)){Donkey.visit();donkeyImpact();return}
@@ -854,7 +854,7 @@ function drawSushi(){
 function frame(now){
  const dt=Math.min(.05,(now-lastFrame)/1000||.016);lastFrame=now;
  if(mode&&state){advance(dt,now);
- syncActions();$('attempts').textContent=String(state.attempts).padStart(2,'0');$('time').textContent=fmt(state.elapsed);
+ syncActions();$('attempts').textContent=String(Journey.attempts(mode)).padStart(2,'0');$('time').textContent=fmt(state.elapsed);
  $('percent').textContent=Math.round(state.progress*100)+'%';$('progress').style.width=Math.round(state.progress*100)+'%';
  const dpr=Math.min(window.devicePixelRatio||1,2),r=canvas.getBoundingClientRect(),w=Math.round(r.width*dpr),h=Math.round(r.height*dpr);
  if(canvas.width!==w||canvas.height!==h){canvas.width=w;canvas.height=h}ctx.setTransform(canvas.width/W,0,0,canvas.height/H,0,0);scene();
