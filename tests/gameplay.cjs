@@ -168,8 +168,8 @@ test('bomb buttons respond and pliers cut individual wires through tap or drag',
  h.fire('pointerdown',787,350);h.fire('pointercancel',500,300);assert(!h.run('state.bombCuts[2]'));
  assert(!h.run('state.finished'));assert(h.run('state.progress')<1);
 });
-test('eleven catalog entries link to existing game artwork without revealing the bomb trick',()=>{
- const html=fs.readFileSync(path.join(root,'index.html'),'utf8');assert.equal((html.match(/class="game-card"/g)||[]).length,11);
+test('twelve catalog entries link to existing game artwork without revealing the bomb trick',()=>{
+ const html=fs.readFileSync(path.join(root,'index.html'),'utf8');assert.equal((html.match(/class="game-card"/g)||[]).length,12);
  for(const mode of ['leaf','bomb','sweep','sushi','dog']){assert(html.includes('data-open="'+mode+'"'));for(const width of [480,960]){assert(html.includes('assets/'+mode+'-'+width+'.webp'));assert(fs.existsSync(path.join(root,'assets',mode+'-'+width+'.webp')));}}
  const card=html.split('data-open="bomb"')[0].split('<article').pop();assert(!/imposible|sin solución|siempre explota/i.test(card));
 });
